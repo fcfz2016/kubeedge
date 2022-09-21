@@ -1,6 +1,7 @@
 package modules
 
 const (
+	RelayModuleName     = "relay"
 	CloudHubModuleName  = "cloudhub"
 	CloudHubModuleGroup = "cloudhub"
 

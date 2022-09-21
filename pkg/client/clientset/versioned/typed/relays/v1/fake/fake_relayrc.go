@@ -20,7 +20,6 @@ package fake
 
 import (
 	"context"
-	relaysv1 "relayv2/pkg/apis/relays/v1"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -28,6 +27,8 @@ import (
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
+
+	relaysv1 "github.com/kubeedge/kubeedge/pkg/apis/relays/v1"
 )
 
 // FakeRelayrcs implements RelayrcInterface

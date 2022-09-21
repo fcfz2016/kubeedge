@@ -20,16 +20,17 @@ package v1
 
 import (
 	"context"
-	relaysv1 "relayv2/pkg/apis/relays/v1"
-	versioned "relayv2/pkg/generated/clientset/versioned"
-	internalinterfaces "relayv2/pkg/generated/informers/externalversions/internalinterfaces"
-	v1 "relayv2/pkg/generated/listers/relays/v1"
 	time "time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
+
+	relaysv1 "github.com/kubeedge/kubeedge/pkg/apis/relays/v1"
+	versioned "github.com/kubeedge/kubeedge/pkg/client/clientset/versioned"
+	internalinterfaces "github.com/kubeedge/kubeedge/pkg/client/informers/externalversions/internalinterfaces"
+	v1 "github.com/kubeedge/kubeedge/pkg/client/listers/relays/v1"
 )
 
 // RelayrcInformer provides access to a shared informer and lister for
