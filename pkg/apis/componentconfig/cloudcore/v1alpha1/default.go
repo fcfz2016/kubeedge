@@ -136,6 +136,9 @@ func NewDefaultCloudCoreConfig() *CloudCoreConfig {
 			DynamicController: &DynamicController{
 				Enable: false,
 			},
+			RelayController: &RelayController{
+				Enable: true,
+			},
 			CloudStream: &CloudStream{
 				Enable:                  false,
 				TLSTunnelCAFile:         constants.DefaultCAFile,
