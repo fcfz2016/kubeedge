@@ -2,6 +2,9 @@ package relaycontroller
 
 import (
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
+	"github.com/kubeedge/beehive/pkg/core/model"
+	"github.com/kubeedge/kubeedge/cloud/pkg/common/messagelayer"
+	"github.com/kubeedge/kubeedge/cloud/pkg/common/modules"
 	v1 "github.com/kubeedge/kubeedge/pkg/apis/relays/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/klog/v2"
@@ -9,8 +12,12 @@ import (
 )
 
 const (
-	CloseOperation = "close"
-	OpenOperation  = "open"
+	RelayCloseOperation  = "close"
+	RelayOpenOperation   = "open"
+	RelayUpdateOperation = "update"
+
+	GroupResource     = "relay"
+	ResourceTypeRelay = "relayres"
 )
 
 // 方法的具体实现
@@ -46,98 +53,60 @@ func (rc *RelayController) checkRelay() {
 func (rc *RelayController) relayrcAdded(relayrc *v1.Relayrc) {
 	rc.relayrcManager.RelayInfo.Store(relayrc.Name, relayrc)
 	klog.Warningf("Relay added", relayrc.Spec.RelayID)
-	//if relayrc.Spec.Open {
-	//	if relayrc.Spec.RelayID != "" {
-	//		// 下发
-	//		msg := model.NewMessage("")
-	//		resource, err := messagelayer.BuildResource(relayrc.Spec.RelayID, "", "", "")
-	//		if err != nil {
-	//			klog.Warningf("Built message resource failed with error: %s", err)
-	//			return
-	//		}
-	//		msg.BuildRouter(modules.RelayControllerModuleName, constants.RelayGroupName, resource, model.OpenOperation)
-	//		content := relayrc.Spec
-	//		msg.Content = content
-	//		err = rc.messageLayer.Send(*msg)
-	//	}
-	//}
+	if relayrc.Spec.Open {
+		if isRelayIDExist(relayrc.Spec.RelayID) {
+			klog.Warningf("store RelayID")
+			// 下发
+			msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayOpenOperation, relayrc)
+			err := rc.messageLayer.Send(*msg)
+			klog.Warningf("relay added send error", err)
+		} else {
+			klog.Warningf("RelayID is empty")
+		}
+	}
 }
 
 func (rc *RelayController) relayrcDeleted(relayrc *v1.Relayrc) {
 	rc.relayrcManager.RelayInfo.Delete(relayrc.Name)
 	klog.Warningf("Relay delete")
 	// 下发关闭信息
-	//msg := model.NewMessage("")
-	//resource, err := messagelayer.BuildResource(relayrc.Spec.RelayID, "", "", "")
-	//if err != nil {
-	//	klog.Warningf("Built message resource failed with error: %s", err)
-	//	return
-	//}
-	//msg.BuildRouter(modules.RelayControllerModuleName, constants.RelayGroupName, resource, model.DeleteOperation)
-	//err = rc.messageLayer.Send(*msg)
-	//err = rc.messageLayer.Send(*msg)
+	msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayCloseOperation, relayrc)
+	err := rc.messageLayer.Send(*msg)
+	klog.Warningf("relay close send error", err)
 }
 
 func (rc *RelayController) relayrcUpdated(relayrc *v1.Relayrc) {
-	klog.Warningf("Relay updated", relayrc.Spec.RelayID)
-	//value, ok := rc.relayrcManager.RelayInfo.Load(relayrc.Name)
-	//rc.relayrcManager.RelayInfo.Store(relayrc.Name, relayrc)
-	//if ok {
-	//	cacheRelayrc := value.(*v1.Relayrc)
-	//	if isRelayRCUpdated(cacheRelayrc, relayrc) {
-	//		if isSwitchUpdated(cacheRelayrc.Spec.Open, relayrc.Spec.Open) {
-	//			if relayrc.Spec.Open {
-	//				if isRelayIDExist(relayrc.Spec.RelayID) {
-	//					// 下发信息，关掉再打开的情况，必须保证有一个指定的relayID
-	//					msg := model.NewMessage("")
-	//					resource, err := messagelayer.BuildResource(relayrc.Spec.RelayID, "", "", "")
-	//					if err != nil {
-	//						klog.Warningf("Built message resource failed with error: %s", err)
-	//						return
-	//					}
-	//					msg.BuildRouter(modules.RelayControllerModuleName, constants.RelayGroupName, resource, model.UpdateOperation)
-	//					content := relayrc.Spec
-	//					msg.Content = content
-	//					err = rc.messageLayer.Send(*msg)
-	//				}
-	//			} else {
-	//				// 下发关闭，检查发送到的目标节点是否为“”，如果为“”取旧值
-	//				msg := model.NewMessage("")
-	//				var resource string
-	//				var err error
-	//				if relayrc.Spec.RelayID == "" {
-	//					resource, err = messagelayer.BuildResource(cacheRelayrc.Spec.RelayID, "", "", "")
-	//				} else {
-	//					resource, err = messagelayer.BuildResource(relayrc.Spec.RelayID, "", "", "")
-	//				}
-	//
-	//				if err != nil {
-	//					klog.Warningf("Built message resource failed with error: %s", err)
-	//					return
-	//				}
-	//				msg.BuildRouter(modules.RelayControllerModuleName, constants.RelayGroupName, resource, model.CloseOperation)
-	//				content := relayrc.Spec
-	//				msg.Content = content
-	//				err = rc.messageLayer.Send(*msg)
-	//			}
-	//		} else if isRelayIDUpdated(cacheRelayrc.Spec.RelayID, relayrc.Spec.RelayID) {
-	//			if relayrc.Spec.RelayID != "" {
-	//				// 下发信息
-	//				// 下发关闭
-	//				msg := model.NewMessage("")
-	//				resource, err := messagelayer.BuildResource(cacheRelayrc.Spec.RelayID, "", "", "")
-	//				if err != nil {
-	//					klog.Warningf("Built message resource failed with error: %s", err)
-	//					return
-	//				}
-	//				msg.BuildRouter(modules.RelayControllerModuleName, constants.RelayGroupName, resource, model.UpdateOperation)
-	//				content := relayrc.Spec
-	//				msg.Content = content
-	//				err = rc.messageLayer.Send(*msg)
-	//			}
-	//		}
-	//	}
-	//}
+	// klog.Warningf("Relay updated", relayrc.Spec.RelayID)
+	value, ok := rc.relayrcManager.RelayInfo.Load(relayrc.Name)
+	rc.relayrcManager.RelayInfo.Store(relayrc.Name, relayrc)
+	if ok {
+		cacheRelayrc := value.(*v1.Relayrc)
+		if isRelayRCUpdated(cacheRelayrc, relayrc) {
+			// 如果是开关改动
+			if isSwitchUpdated(cacheRelayrc.Spec.Open, relayrc.Spec.Open) {
+				if relayrc.Spec.Open {
+					if isRelayIDExist(relayrc.Spec.RelayID) {
+						msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayOpenOperation, relayrc)
+						err := rc.messageLayer.Send(*msg)
+						klog.Warningf("relay open msg send error", err)
+					}
+				} else {
+					msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayCloseOperation, relayrc)
+					err := rc.messageLayer.Send(*msg)
+					klog.Warningf("relay open msg send error", err)
+				}
+			} else if isRelayIDUpdated(cacheRelayrc.Spec.RelayID, relayrc.Spec.RelayID) {
+				if relayrc.Spec.Open {
+					// 新的relayID信息发送给旧的relayID处理
+					msg := buildControllerMessage(cacheRelayrc.Spec.RelayID, relayrc.Namespace, RelayUpdateOperation, relayrc)
+					err := rc.messageLayer.Send(*msg)
+					klog.Warningf("relay open msg send error", err)
+				}
+			} else {
+				klog.Warningf("any other relay msg updated")
+			}
+		}
+	}
 }
 
 func isRelayIDExist(id string) bool {
@@ -157,4 +126,21 @@ func isRelayIDUpdated(old string, new string) bool {
 
 func isRelayRCUpdated(old *v1.Relayrc, new *v1.Relayrc) bool {
 	return !reflect.DeepEqual(old.ObjectMeta, new.ObjectMeta) || !reflect.DeepEqual(old.Spec, new.Spec) || !reflect.DeepEqual(old.Status, new.Status)
+}
+
+func buildControllerMessage(nodeID, namespace, opr string, relayrc *v1.Relayrc) *model.Message {
+	msg := model.NewMessage("")
+
+	resource, err := messagelayer.BuildResource(nodeID, namespace, ResourceTypeRelay, "")
+	if err != nil {
+		klog.Warningf("Built message resource failed with error: %s", err)
+
+		return nil
+	}
+
+	msg.BuildRouter(modules.RelayControllerModuleName, GroupResource, resource, opr)
+	content := relayrc.Spec
+	msg.Content = content
+
+	return msg
 }

@@ -415,6 +415,12 @@ func (mh *MessageHandle) ListMessageWriteLoop(info *model.HubInfo, stopServe cha
 
 		trimMessage(msg)
 
+		//msgResource := msg.GetResource()
+		//if strings.Contains(msgResource, "relayres") {
+		//	// conn, ok := mh.nodeConns.Load(info.NodeID)
+		//	klog.Warningf("begin to handle relaycontroller message")
+		//}
+
 		conn, ok := mh.nodeConns.Load(info.NodeID)
 		if !ok {
 			continue

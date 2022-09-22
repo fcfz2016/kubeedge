@@ -63,6 +63,25 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 		default:
 		}
 		msg, err := beehiveContext.Receive(model.SrcCloudHub)
+
+		msgResource := msg.GetResource()
+		if strings.Contains(msgResource, "relayres") {
+			// conn, ok := mh.nodeConns.Load(info.NodeID)
+			klog.Warningf("begin to handle relaycontroller message")
+			switch msg.Router.Operation {
+			case "open":
+				klog.Warningf("relaycontroller open")
+				break
+			case "close":
+				klog.Warningf("reloycontroller close")
+				break
+			case "update":
+				klog.Warningf("relaycontroller update")
+			default:
+				break
+			}
+			continue
+		}
 		klog.V(4).Infof("[cloudhub] dispatchMessage to edge: %+v", msg)
 		if err != nil {
 			klog.Info("receive not Message format message")
@@ -184,6 +203,10 @@ func getListMsgKey(obj interface{}) (string, error) {
 
 func isListResource(msg *beehiveModel.Message) bool {
 	msgResource := msg.GetResource()
+	if strings.Contains(msgResource, "relayres") {
+
+		return true
+	}
 	if strings.Contains(msgResource, beehiveModel.ResourceTypePodlist) ||
 		strings.Contains(msgResource, "membership") ||
 		strings.Contains(msgResource, "twin/cloud_updated") ||

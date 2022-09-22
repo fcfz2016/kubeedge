@@ -37,7 +37,7 @@ func (rc *RelayController) Group() string {
 
 func (rc *RelayController) Start() {
 	//TODO implement me
-	klog.Info("Start relay devicecontroller")
+	klog.Info("Start relay controller")
 	go rc.checkRelay()
 
 	time.Sleep(1 * time.Second)
