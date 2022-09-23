@@ -78,6 +78,7 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 			case "update":
 				klog.Warningf("relaycontroller update")
 			default:
+				klog.Warningf("relaycontroller default")
 				break
 			}
 			continue
