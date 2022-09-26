@@ -78,9 +78,8 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 				break
 			case "updaterelay":
 				cloudrelay.RelayHandle.SetRelayId("nodeCDE")
-				_, rmsg := cloudrelay.RelayHandle.ChangeDesToRelay(&msg)
-				klog.Warningf("relaycontroller update", rmsg.Router.Resource)
-				klog.Warningf("relaycontroller update")
+				oldId, rmsg := cloudrelay.RelayHandle.ChangeDesToRelay(&msg)
+				klog.Warningf("relaycontroller update", oldId, rmsg.Router.Resource)
 			default:
 				klog.Warningf("relaycontroller default")
 				break

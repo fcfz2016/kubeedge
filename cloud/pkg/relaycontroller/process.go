@@ -3,6 +3,7 @@ package relaycontroller
 import (
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	"github.com/kubeedge/beehive/pkg/core/model"
+	"github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/cloudrelay"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/messagelayer"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/modules"
 	v1 "github.com/kubeedge/kubeedge/pkg/apis/relays/v1"
@@ -69,6 +70,7 @@ func (rc *RelayController) relayrcAdded(relayrc *v1.Relayrc) {
 func (rc *RelayController) relayrcDeleted(relayrc *v1.Relayrc) {
 	rc.relayrcManager.RelayInfo.Delete(relayrc.Name)
 	klog.Warningf("Relay delete")
+	cloudrelay.RelayHandle.SetRelayId("")
 	// 下发关闭信息
 	msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayCloseOperation, relayrc)
 	err := rc.messageLayer.Send(*msg)
@@ -79,6 +81,8 @@ func (rc *RelayController) relayrcUpdated(relayrc *v1.Relayrc) {
 	// klog.Warningf("Relay updated", relayrc.Spec.RelayID)
 	value, ok := rc.relayrcManager.RelayInfo.Load(relayrc.Name)
 	rc.relayrcManager.RelayInfo.Store(relayrc.Name, relayrc)
+
+	cloudrelay.RelayHandle.SetRelayId(relayrc.Spec.RelayID)
 	if ok {
 		cacheRelayrc := value.(*v1.Relayrc)
 		if isRelayRCUpdated(cacheRelayrc, relayrc) {
