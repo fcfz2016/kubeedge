@@ -1,6 +1,7 @@
 package cloudhub
 
 import (
+	"github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/cloudrelay"
 	"os"
 
 	"k8s.io/client-go/tools/cache"
@@ -63,6 +64,12 @@ func (a *cloudHub) Enable() bool {
 }
 
 func (a *cloudHub) Start() {
+
+	if hubconfig.Config.CloudRelay.Enable {
+		cloudrelay.InitCloudRelay()
+		cloudrelay.RelayHandle.LoadRelayID()
+	}
+
 	if !cache.WaitForCacheSync(beehiveContext.Done(), a.informersSyncedFuncs...) {
 		klog.Errorf("unable to sync caches for objectSyncController")
 		os.Exit(1)

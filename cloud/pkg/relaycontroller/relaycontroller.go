@@ -2,6 +2,7 @@ package relaycontroller
 
 import (
 	"github.com/kubeedge/beehive/pkg/core"
+	"github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/cloudrelay"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/informers"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/messagelayer"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/modules"
@@ -49,6 +50,10 @@ func (rc *RelayController) Enable() bool {
 }
 
 func newRelayController(enable bool) *RelayController {
+	// init cloudrelay
+	cloudrelay.InitCloudRelay()
+	klog.Warningf("cloudrelay.name is ", cloudrelay.RelayHandle.GetRelayId())
+
 	if !enable {
 		return &RelayController{enable: enable}
 	}

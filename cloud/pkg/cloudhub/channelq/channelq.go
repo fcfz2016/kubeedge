@@ -3,6 +3,7 @@ package channelq
 import (
 	"context"
 	"fmt"
+	"github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/cloudrelay"
 	"strings"
 	"sync"
 
@@ -69,13 +70,16 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 			// conn, ok := mh.nodeConns.Load(info.NodeID)
 			klog.Warningf("begin to handle relaycontroller message")
 			switch msg.Router.Operation {
-			case "open":
+			case "openrelay":
 				klog.Warningf("relaycontroller open")
 				break
-			case "close":
+			case "closerelay":
 				klog.Warningf("reloycontroller close")
 				break
-			case "update":
+			case "updaterelay":
+				cloudrelay.RelayHandle.SetRelayId("nodeCDE")
+				_, rmsg := cloudrelay.RelayHandle.ChangeDesToRelay(&msg)
+				klog.Warningf("relaycontroller update", rmsg.Router.Resource)
 				klog.Warningf("relaycontroller update")
 			default:
 				klog.Warningf("relaycontroller default")

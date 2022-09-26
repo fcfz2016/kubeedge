@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	RelayCloseOperation  = "close"
-	RelayOpenOperation   = "open"
-	RelayUpdateOperation = "update"
+	RelayCloseOperation  = "closerelay"
+	RelayOpenOperation   = "openrelay"
+	RelayUpdateOperation = "updaterelay"
 
 	GroupResource     = "relay"
 	ResourceTypeRelay = "relayres"
