@@ -60,7 +60,9 @@ func (rc *RelayController) relayrcAdded(relayrc *v1.Relayrc) {
 			// 下发
 			msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayOpenOperation, relayrc)
 			err := rc.messageLayer.Send(*msg)
-			klog.Warningf("relay added send error", err)
+			if err != nil {
+				klog.Warningf("relay added send error", err)
+			}
 		} else {
 			klog.Warningf("RelayID is empty")
 		}
@@ -74,7 +76,9 @@ func (rc *RelayController) relayrcDeleted(relayrc *v1.Relayrc) {
 	// 下发关闭信息
 	msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayCloseOperation, relayrc)
 	err := rc.messageLayer.Send(*msg)
-	klog.Warningf("relay close send error", err)
+	if err != nil {
+		klog.Warningf("relay close send error", err)
+	}
 }
 
 func (rc *RelayController) relayrcUpdated(relayrc *v1.Relayrc) {

@@ -16,5 +16,5 @@ const (
 	// StreamGroup group
 	StreamGroup = "edgestream"
 
-	RelayGroup = "edgerelay"
+	RelayGroup = "relay"
 )

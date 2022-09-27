@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"github.com/kubeedge/kubeedge/edge/pkg/edgerelay"
 	"net"
 	"os"
 
@@ -176,4 +177,5 @@ func registerModules(c *v1alpha1.EdgeCoreConfig) {
 	test.Register(c.Modules.DBTest)
 	// Note: Need to put it to the end, and wait for all models to register before executing
 	dbm.InitDBConfig(c.DataBase.DriverName, c.DataBase.AliasName, c.DataBase.DataSource)
+	edgerelay.Register(c.Modules.EdgeRelay)
 }

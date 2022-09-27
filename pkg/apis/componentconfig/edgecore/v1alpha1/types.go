@@ -97,6 +97,8 @@ type Modules struct {
 	// EdgeStream indicates edgestream module config
 	// +Required
 	EdgeStream *EdgeStream `json:"edgeStream,omitempty"`
+
+	EdgeRelay *EdgeRelay `json:"edgeRelay,omitempty"`
 }
 
 // Edged indicates the config fo edged module
@@ -462,4 +464,8 @@ type EdgeStream struct {
 	// WriteDeadline indicates write dead line (second)
 	// default 15
 	WriteDeadline int32 `json:"writeDeadline,omitempty"`
+}
+
+type EdgeRelay struct {
+	Enable bool `json:"enable"`
 }
