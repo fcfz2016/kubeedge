@@ -24,7 +24,7 @@ type RelayData struct {
 func (er *EdgeRelay) SaveRelayID(relayID string) {
 
 	// 更新config和数据库
-	config.Config.relayID = relayID
+	config.Config.SetRelayID(relayID)
 	// 判断数据库中能不能查到，不能查到就insert，能查到就update
 	meta := &dao.Meta{
 		Key:   constants.RelayID,
@@ -63,7 +63,7 @@ func (er *EdgeRelay) MsgFromEdgeHub() {
 			time.Sleep(time.Second)
 		}
 		// 调用HandleMsgFromEdgeHub
-		er.HandleMsgFromEdgeHub(&message)
+		//er.HandleMsgFromEdgeHub(&message)
 	}
 
 }

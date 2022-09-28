@@ -18,6 +18,7 @@ package options
 
 import (
 	"fmt"
+	"k8s.io/klog/v2"
 	"path"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -58,5 +59,6 @@ func (o *CloudCoreOptions) Config() (*config.CloudCoreConfig, error) {
 	if err := cfg.Parse(o.ConfigFile); err != nil {
 		return nil, err
 	}
+	klog.Infof("test cfg %v", cfg.Modules.RelayController)
 	return cfg, nil
 }

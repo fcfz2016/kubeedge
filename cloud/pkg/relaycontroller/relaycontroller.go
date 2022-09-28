@@ -51,6 +51,11 @@ func (rc *RelayController) Enable() bool {
 
 func newRelayController(enable bool) *RelayController {
 	// init cloudrelay
+	if enable {
+		klog.Warningf("enable relaycontroller")
+	} else {
+		klog.Warningf("unable relaycontroller")
+	}
 	cloudrelay.InitCloudRelay()
 	klog.Warningf("cloudrelay.name is ", cloudrelay.RelayHandle.GetRelayId())
 
