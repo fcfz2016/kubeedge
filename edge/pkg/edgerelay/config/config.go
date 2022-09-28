@@ -32,3 +32,4 @@ func (config *Configure) SetRelayID(relayID string) {
 func (config *Configure) GetRelayID() string {
 	return config.relayID
 }
+func(conf)

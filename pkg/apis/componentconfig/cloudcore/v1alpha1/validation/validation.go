@@ -40,6 +40,7 @@ func ValidateCloudCoreConfiguration(c *v1alpha1.CloudCoreConfig) field.ErrorList
 	allErrs = append(allErrs, ValidateModuleSyncController(*c.Modules.SyncController)...)
 	allErrs = append(allErrs, ValidateModuleDynamicController(*c.Modules.DynamicController)...)
 	allErrs = append(allErrs, ValidateModuleCloudStream(*c.Modules.CloudStream)...)
+	allErrs = append(allErrs, ValidateModuleRelayController(*c.Modules.RelayController)...)
 	return allErrs
 }
 
@@ -134,6 +135,15 @@ func ValidateModuleSyncController(d v1alpha1.SyncController) field.ErrorList {
 
 // ValidateModuleDynamicController validates `d` and returns an errorList if it is invalid
 func ValidateModuleDynamicController(d v1alpha1.DynamicController) field.ErrorList {
+	if !d.Enable {
+		return field.ErrorList{}
+	}
+
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func ValidateModuleRelayController(d v1alpha1.RelayController) field.ErrorList {
 	if !d.Enable {
 		return field.ErrorList{}
 	}
