@@ -8,5 +8,6 @@ const (
 	ResNode              = "node"
 	RelayID              = "relayID"
 	RelayType            = "relay"
+	RelayData            = "relayData"
 	POST                 = "POST"
 )

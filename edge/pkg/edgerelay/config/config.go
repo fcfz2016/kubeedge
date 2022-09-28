@@ -1,9 +1,9 @@
 package config
 
 import (
-	"github.com/kubeedge/kubeedge/pkg/util"
-
+	"github.com/kubeedge/kubeedge/edge/pkg/edgerelay/common"
 	"github.com/kubeedge/kubeedge/pkg/apis/componentconfig/edgecore/v1alpha1"
+	"github.com/kubeedge/kubeedge/pkg/util"
 	"sync"
 )
 
@@ -15,6 +15,7 @@ type Configure struct {
 	relayID string
 	// 本机ID
 	nodeID string
+	data   common.RelayData
 }
 
 func InitConfig(er *v1alpha1.EdgeRelay) {
@@ -31,4 +32,10 @@ func (config *Configure) SetRelayID(relayID string) {
 }
 func (config *Configure) GetRelayID() string {
 	return config.relayID
+}
+func (config *Configure) SetData(data common.RelayData) {
+	config.data = data
+}
+func (config *Configure) GetData() common.RelayData {
+	return config.data
 }

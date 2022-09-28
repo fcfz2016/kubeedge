@@ -40,9 +40,11 @@ func newEdgeRelay(enable bool) *EdgeRelay {
 
 func (er *EdgeRelay) Start() {
 	klog.Info("Start edge relay")
-	// 首先读取qlite里的信息，放到内存中（更新config）
-	// er.LoadRelayID()
 
+	// 首先读取qlite里的信息，放到内存中（更新config）
+	er.Load()
+	
 	// go er.MsgFromOtherEdge()
+	go er.server()
 
 }

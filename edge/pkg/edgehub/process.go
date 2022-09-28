@@ -57,13 +57,16 @@ type defaultHandler struct {
 func (*defaultHandler) Filter(message *model.Message) bool {
 	group := message.GetGroup()
 	return group == messagepkg.ResourceGroupName || group == messagepkg.TwinGroupName ||
-		group == messagepkg.FuncGroupName || group == messagepkg.UserGroupName
+		group == messagepkg.FuncGroupName || group == messagepkg.UserGroupName || group == messagepkg.RelayGroupName
 }
 
 func (*defaultHandler) Process(message *model.Message, clientHub clients.Adapter) error {
 	group := message.GetGroup()
+
 	md := ""
 	switch group {
+	case messagepkg.RelayGroupName:
+		md = modules.RelayGroup
 	case messagepkg.ResourceGroupName:
 		md = modules.MetaGroup
 	case messagepkg.TwinGroupName:
