@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/cloudrelay"
 	"regexp"
 	"strings"
 	"sync"
@@ -34,6 +35,8 @@ import (
 	"github.com/kubeedge/kubeedge/pkg/metaserver/util"
 	"github.com/kubeedge/viaduct/pkg/conn"
 	"github.com/kubeedge/viaduct/pkg/mux"
+
+	relayconstants "github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/cloudrelay/constants"
 )
 
 // ExitCode exit code
@@ -119,6 +122,14 @@ func (mh *MessageHandle) HandleServer(container *mux.MessageContainer, writer mu
 		klog.Errorf("Handle a nil message error, node : %s", nodeID)
 		return
 	}
+
+	if container.Message.GetOperation() == relayconstants.OpUploadRelayMessage && cloudrelay.RelayHandle.GetStatus() {
+		klog.V(4).Infof("Relay message received from node: %s", nodeID)
+		//msg := container.Message
+		mh.RelayHandleServer(container)
+		return
+	}
+
 	klog.V(4).Infof("[cloudhub/HandlerServer] get msg from edge(%v): %+v", nodeID, container.Message)
 	if container.Message.GetOperation() == model.OpKeepalive {
 		klog.V(4).Infof("Keepalive message received from node: %s", nodeID)
@@ -150,6 +161,51 @@ func (mh *MessageHandle) HandleServer(container *mux.MessageContainer, writer mu
 		beehiveContext.Send(modules.RouterModuleName, *container.Message)
 	} else {
 		err := mh.PubToController(&model.HubInfo{ProjectID: projectID, NodeID: nodeID}, container.Message)
+		if err != nil {
+			// if err, we should stop node, write data to edgehub, stop nodify
+			klog.Errorf("Failed to serve handle with error: %s", err.Error())
+		}
+	}
+}
+
+// RelayHandleServer handle relay message from edge
+func (mh *MessageHandle) RelayHandleServer(container *mux.MessageContainer) {
+
+	rcontainer := cloudrelay.RelayHandle.UnsealMessage(container)
+
+	nodeID := rcontainer.Header.Get("node_id")
+	projectID := rcontainer.Header.Get("project_id")
+
+	if rcontainer.Message.GetOperation() == model.OpKeepalive {
+		klog.V(4).Infof("Keepalive message received from node: %s", nodeID)
+
+		nodeKeepalive, ok := mh.KeepaliveChannel.Load(nodeID)
+		if !ok {
+			klog.Errorf("Failed to load node : %s", nodeID)
+			return
+		}
+		nodeKeepalive.(chan struct{}) <- struct{}{}
+		return
+	}
+
+	// handle the response from edge
+	if VolumeRegExp.MatchString(rcontainer.Message.GetResource()) {
+		beehiveContext.SendResp(*rcontainer.Message)
+		return
+	}
+
+	// handle the ack message from edge
+	if rcontainer.Message.Router.Operation == beehiveModel.ResponseOperation {
+		if ackChan, ok := mh.MessageAcks.Load(rcontainer.Message.Header.ParentID); ok {
+			close(ackChan.(chan struct{}))
+			mh.MessageAcks.Delete(rcontainer.Message.Header.ParentID)
+		}
+		return
+	} else if rcontainer.Message.GetOperation() == beehiveModel.UploadOperation && rcontainer.Message.GetGroup() == modules.UserGroup {
+		rcontainer.Message.Router.Resource = fmt.Sprintf("node/%s/%s", nodeID, rcontainer.Message.Router.Resource)
+		beehiveContext.Send(modules.RouterModuleName, *rcontainer.Message)
+	} else {
+		err := mh.PubToController(&model.HubInfo{ProjectID: projectID, NodeID: nodeID}, rcontainer.Message)
 		if err != nil {
 			// if err, we should stop node, write data to edgehub, stop nodify
 			klog.Errorf("Failed to serve handle with error: %s", err.Error())
@@ -414,12 +470,6 @@ func (mh *MessageHandle) ListMessageWriteLoop(info *model.HubInfo, stopServe cha
 		klog.V(4).Infof("event to send for node %s, %s, content %s", info.NodeID, dumpMessageMetadata(msg), msg.Content)
 
 		trimMessage(msg)
-
-		//msgResource := msg.GetResource()
-		//if strings.Contains(msgResource, "relayres") {
-		//	// conn, ok := mh.nodeConns.Load(info.NodeID)
-		//	klog.Warningf("begin to handle relaycontroller message")
-		//}
 
 		conn, ok := mh.nodeConns.Load(info.NodeID)
 		if !ok {

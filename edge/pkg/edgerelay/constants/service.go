@@ -9,5 +9,7 @@ const (
 	RelayID              = "relayID"
 	RelayType            = "relay"
 	RelayData            = "relayData"
+	RelayStatus          = "relayStatus"
 	POST                 = "POST"
+	RelayMark            = "markrelay"
 )

@@ -7,10 +7,15 @@ import (
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	"github.com/kubeedge/beehive/pkg/core/model"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/modules"
+	"github.com/kubeedge/kubeedge/edge/pkg/edgehub/clients"
+	"github.com/kubeedge/kubeedge/edge/pkg/edgehub/common/msghandler"
+	hubConfig "github.com/kubeedge/kubeedge/edge/pkg/edgehub/config"
+	"github.com/kubeedge/kubeedge/edge/pkg/edgehub/relay"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgerelay/common"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgerelay/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgerelay/constants"
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager/dao"
+	v1 "github.com/kubeedge/kubeedge/pkg/apis/relays/v1"
 	"github.com/kubeedge/viaduct/pkg/mux"
 	"io/ioutil"
 	"k8s.io/klog/v2"
@@ -20,11 +25,65 @@ import (
 )
 
 func (er *EdgeRelay) Load() {
+	er.LoadRelayStatus()
 	er.LoadRelayID()
 	er.LoadData()
 }
-func (er *EdgeRelay) SaveRelayID(relayID string) {
 
+func (er *EdgeRelay) Save(status bool, relayID string, relayData v1.RelayData) {
+	er.SaveRelayStatus(status)
+	er.SaveRelayID(relayID)
+	er.SaveDate(relayData)
+}
+
+func (er *EdgeRelay) UnMarshalMsg(msg *model.Message) (bool, string, v1.RelayData) {
+	var relayrc v1.RelayrcSpec
+	err := json.Unmarshal(msg.Content.([]byte), &relayrc)
+	if err != nil {
+		klog.V(4).Infof("RelayHandleServer Unmarshal failed", err)
+	}
+
+	return relayrc.Open, relayrc.RelayID, relayrc.Data
+}
+
+func (er *EdgeRelay) LoadRelayStatus() {
+	// 读取数据库中的中继信息，在每次启动的时候进行读取
+	metas, err := dao.QueryMeta("key", constants.RelayStatus)
+	if err != nil || len(*metas) == 0 {
+		klog.Errorf("query relayID failed")
+		return
+	}
+	var result = *metas
+	if result[0] == "1" {
+		config.Config.SetStatus(true)
+	} else {
+		config.Config.SetStatus(false)
+	}
+}
+func (er *EdgeRelay) SaveRelayStatus(relayStatus bool) {
+	klog.Errorf("save relayStatus")
+	config.Config.SetStatus(relayStatus)
+	var stringStatus string
+	if relayStatus {
+		stringStatus = "1"
+	} else {
+		stringStatus = "0"
+	}
+	meta := &dao.Meta{
+		Key:   constants.RelayStatus,
+		Type:  constants.RelayType,
+		Value: string(stringStatus),
+	}
+	err := dao.InsertOrUpdate(meta)
+	if err != nil {
+		klog.Errorf("save relayStatus failed", err)
+		return
+	}
+}
+
+func (er *EdgeRelay) SaveRelayID(relayID string) {
+	klog.Errorf("save relayID")
+	er.SetIsRelayNodeStatus()
 	// 更新config和数据库
 	config.Config.SetRelayID(relayID)
 	// 判断数据库中能不能查到，不能查到就insert，能查到就update
@@ -39,17 +98,32 @@ func (er *EdgeRelay) SaveRelayID(relayID string) {
 	}
 }
 func (er *EdgeRelay) LoadRelayID() {
+	er.SetIsRelayNodeStatus()
 	// 读取数据库中的中继信息，在每次启动的时候进行读取
 	metas, err := dao.QueryMeta("key", constants.RelayID)
 	if err != nil || len(*metas) == 0 {
 		klog.Errorf("query relayID failed")
+		return
 	}
 	var result = *metas
 	config.Config.SetRelayID(result[0])
 }
 
-func (er *EdgeRelay) SaveDate(data common.RelayData) {
+// 之后用于控制edgehub是否可以直连，在判断直连时，必须满足！isrelaynode&&relaystatus才确定为不直连
+func (er *EdgeRelay) SetIsRelayNodeStatus() {
+	if config.Config.GetRelayID() == config.Config.GetNodeID() {
+		// 打开通道
+		config.Config.SetIsRelayNode(true)
+	} else {
+		config.Config.SetIsRelayNode(false)
+	}
+}
+func (er *EdgeRelay) ContinueEdgeHub() {
+	relay.HubRelayChan.IsClose <- struct{}{}
+}
 
+func (er *EdgeRelay) SaveDate(data v1.RelayData) {
+	klog.Errorf("save relayData")
 	// 更新config和数据库
 	config.Config.SetData(data)
 	dataJson, err := json.Marshal(data)
@@ -73,14 +147,15 @@ func (er *EdgeRelay) LoadData() {
 	metas, err := dao.QueryMeta("key", constants.RelayData)
 	if err != nil || len(*metas) == 0 {
 		klog.Errorf("query relayData failed")
+		return
 	}
 	var result = *metas
-	data := &common.RelayData{}
-	err = json.Unmarshal([]byte(result[0]), data)
+	data := v1.RelayData{}
+	err = json.Unmarshal([]byte(result[0]), &data)
 	if err != nil {
 		klog.Errorf("unmarshal relay data to json failed")
 	}
-	config.Config.SetData(*data)
+	config.Config.SetData(data)
 }
 
 func (er *EdgeRelay) MsgFromEdgeHub() {
@@ -98,7 +173,8 @@ func (er *EdgeRelay) MsgFromEdgeHub() {
 			time.Sleep(time.Second)
 		}
 		// 调用HandleMsgFromEdgeHub
-		er.HandleMsgFromEdgeHub(&message)
+		//er.HandleMsgFromEdgeHub(&message)
+		klog.Infof("myedgerelay get message from edgehub: %v", message.Router.Group)
 	}
 
 }
@@ -107,10 +183,137 @@ func (er *EdgeRelay) MsgFromEdgeHub() {
 func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 	// 肯定是关于中继类型的信息，才会由EdgeHub发给Relay处理
 	// 查看是否为中继模块下发节点信息
+	if common.GetResourceType(msg.GetResource()) == common.ResourceTypeRelay {
+		status, relayID, relayData := er.UnMarshalMsg(msg)
+		switch msg.Router.Operation {
+		case common.RelayCloseOperation:
+			er.SaveRelayStatus(false)
+			er.ContinueEdgeHub()
+			break
+		case common.RelayOpenOperation:
+			er.Save(status, relayID, relayData)
+			er.SetIsRelayNodeStatus()
+			er.ContinueEdgeHub()
+			break
+		case common.RelayUpdateDataOperation:
+			er.SaveDate(relayData)
+			break
+		case common.RelayUpdateIDOperation:
+			er.SaveRelayID(relayID)
+
+			oldIsRelayNode := config.Config.GetIsRelayNode()
+			er.SetIsRelayNodeStatus()
+			if oldIsRelayNode != config.Config.GetIsRelayNode() {
+				er.ContinueEdgeHub()
+			}
+			break
+		}
+		// 给其他节点下发中继信息
+		if config.Config.GetNodeID() == config.Config.GetRelayID() {
+			container := &mux.MessageContainer{
+				Header:  map[string][]string{},
+				Message: msg,
+			}
+			container.Header.Add("relay_mark", common.ResourceTypeRelay)
+			nodeMap := er.GetAllAddress()
+			for _, v := range nodeMap {
+				er.client(v, container)
+			}
+		}
+	} else {
+		if config.Config.GetNodeID() == config.Config.GetRelayID() {
+			container := &mux.MessageContainer{
+				Header:  map[string][]string{},
+				Message: msg,
+			}
+			nodeID := common.GetNodeID(msg.GetResource())
+			nodeAddr := er.GetAddress(nodeID)
+			er.client(nodeAddr, container)
+		} else {
+			// else 封层container格式，添加自身nodeID和projectID，目标nodeID标为relayID
+			container := &mux.MessageContainer{
+				Header:  map[string][]string{},
+				Message: msg,
+			}
+			container.Header.Add("node_id", config.Config.GetNodeID())
+			container.Header.Add("project_id", hubConfig.Config.ProjectID)
+			relayAddr := er.GetAddress(config.Config.GetRelayID())
+			// 调用MsgToOtherEdge
+			er.client(relayAddr, container)
+		}
+	}
 }
 
 func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
+	relayMark := container.Header.Get("relay_mark")
+	// 如果是节点标记信息
+	if relayMark != "" {
+		klog.Infof("non-relay node get relayID")
+		msg := container.Message
+		status, relayID, relayData := er.UnMarshalMsg(msg)
+		switch msg.Router.Operation {
+		case common.RelayCloseOperation:
+			er.SaveRelayStatus(false)
+			er.ContinueEdgeHub()
+			break
+		case common.RelayOpenOperation:
+			er.Save(status, relayID, relayData)
+			er.SetIsRelayNodeStatus()
+			er.ContinueEdgeHub()
+			break
+		case common.RelayUpdateDataOperation:
+			er.SaveDate(relayData)
+			break
+		case common.RelayUpdateIDOperation:
+			er.SaveRelayID(relayID)
 
+			oldIsRelayNode := config.Config.GetIsRelayNode()
+			er.SetIsRelayNodeStatus()
+			if oldIsRelayNode != config.Config.GetIsRelayNode() {
+				er.ContinueEdgeHub()
+			}
+			break
+		}
+
+	} else {
+		// else if(nodeID==relayID) 对信息进行封装，发送一个Operation为uploadrelay的Message，调用MsgToEdgeHub
+		// 		else 对消息进行拆解，调用MsgToEdgeHub
+		var msg *model.Message
+		// ToCloud
+		if config.Config.GetNodeID() == config.Config.GetRelayID() {
+			msg = container.Message.Clone(container.Message)
+			msg.SetResourceOperation(msg.GetResource(), constants.OpUploadRelayMessage)
+			contentMsg, err := json.Marshal(*msg)
+
+			if err != nil {
+				fmt.Errorf("EdgeRelay SealMessage failed")
+			}
+			msg.Content = contentMsg
+			er.MsgToEdgeHub(msg)
+		} else {
+			// ToOtherModule
+			msg = container.Message
+			er.MsgToOtherModule(msg)
+		}
+	}
+
+}
+func (er *EdgeRelay) MsgToEdgeHub(msg *model.Message) {
+	// ch <- message
+	beehiveContext.Send(modules.EdgeHubModuleName, *msg)
+}
+
+func (er *EdgeRelay) MsgToOtherModule(msg *model.Message) {
+	// 一个摆设cloudhubclient
+	cloudHubClient, err := clients.GetClient()
+	if err != nil {
+		klog.Errorf("relay getclient error, discard: %v", err)
+	}
+
+	err = msghandler.ProcessHandler(*msg, cloudHubClient)
+	if err != nil {
+		klog.Errorf("relay failed to dispatch message, discard: %v", err)
+	}
 }
 
 func (er *EdgeRelay) server() {
@@ -130,24 +333,24 @@ func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Re
 
 		defer request.Body.Close()
 
-		var container *mux.MessageContainer
-		err = json.Unmarshal(body, container)
+		var container mux.MessageContainer
+		err = json.Unmarshal(body, &container)
 
 		if err != nil {
 			fmt.Println("json format error:", err)
 		}
-		er.HandleMsgFromOtherEdge(container)
+		er.HandleMsgFromOtherEdge(&container)
 
 	}
 }
 
 // client
-func (er *EdgeRelay) client(addr common.NodeAddress, container *mux.MessageContainer) {
+func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer) {
 	ip := addr.IP
 	port := addr.Port
 
 	var url string
-	url = ip + strconv.FormatInt(port, 10) + "/postMessage"
+	url = "http://" + ip + ":" + strconv.FormatInt(port, 10) + "/postMessage"
 	contentType := "application/json;charset=utf-8"
 
 	b, err := json.Marshal(container)
@@ -165,12 +368,12 @@ func (er *EdgeRelay) client(addr common.NodeAddress, container *mux.MessageConta
 
 }
 
-func (er *EdgeRelay) GetAddress(nodeID string) common.NodeAddress {
+func (er *EdgeRelay) GetAddress(nodeID string) v1.NodeAddress {
 	var data = config.Config.GetData()
 	return data.AddrData[nodeID]
 }
 
 // 从文件中读取所有的nodeID：addr键值对，返回一个map
-func (er *EdgeRelay) GetAllAddress() map[string]common.NodeAddress {
+func (er *EdgeRelay) GetAllAddress() map[string]v1.NodeAddress {
 	return config.Config.GetData().AddrData
 }

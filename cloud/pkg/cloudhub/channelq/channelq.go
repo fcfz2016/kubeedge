@@ -76,7 +76,8 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 			case "closerelay":
 				klog.Warningf("reloycontroller close")
 				break
-			case "updaterelay":
+			case "updatedatarelay":
+			case "updateidrelay":
 				cloudrelay.RelayHandle.SetRelayId("nodeCDE")
 				oldId, rmsg := cloudrelay.RelayHandle.ChangeDesToRelay(&msg)
 				klog.Warningf("relaycontroller update", oldId, rmsg.Router.Resource)
@@ -84,7 +85,6 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 				klog.Warningf("relaycontroller default")
 				break
 			}
-			continue
 		}
 		klog.V(4).Infof("[cloudhub] dispatchMessage to edge: %+v", msg)
 		if err != nil {
@@ -96,6 +96,24 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 			klog.Warning("node id is not found in the message")
 			continue
 		}
+
+		// relay模式下向relay节点发送数据
+		//rnodeID := cloudrelay.RelayHandle.GetRelayId()
+		//if nodeID != rnodeID && cloudrelay.RelayHandle.GetStatus() && rnodeID != "" {
+		//	_, rmsg, err := cloudrelay.RelayHandle.SealMessage(&msg)
+		//	if err != nil {
+		//		klog.Warning("sealmessage failed in cloudhub")
+		//		continue
+		//	}
+		//
+		//	if isListResource(&msg) {
+		//		q.raddListMessageToQueue(rnodeID, rmsg)
+		//	} else {
+		//		q.raddMessageToQueue(rnodeID, rmsg, &msg)
+		//	}
+		//	continue
+		//}
+
 		if isListResource(&msg) {
 			q.addListMessageToQueue(nodeID, &msg)
 		} else {
@@ -103,7 +121,87 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 		}
 	}
 }
+func (q *ChannelMessageQueue) raddListMessageToQueue(nodeID string, msg *beehiveModel.Message) {
+	nodeListQueue := q.GetNodeListQueue(nodeID)
+	nodeListStore := q.GetNodeListStore(nodeID)
 
+	messageKey, _ := getListMsgKey(msg)
+
+	if err := nodeListStore.Add(msg); err != nil {
+		klog.Errorf("failed to add msg: %s", err)
+		return
+	}
+	nodeListQueue.Add(messageKey)
+}
+
+func (q *ChannelMessageQueue) raddMessageToQueue(nodeID string, rmsg *beehiveModel.Message, msg *beehiveModel.Message) {
+	if rmsg.GetResourceVersion() == "" && !isDeleteMessage(msg) {
+		return
+	}
+
+	nodeQueue := q.GetNodeQueue(nodeID)
+	nodeStore := q.GetNodeStore(nodeID)
+
+	messageKey, err := getMsgKey(rmsg)
+	if err != nil {
+		klog.Errorf("fail to get message key for message: %s", rmsg.Header.ID)
+		return
+	}
+
+	//if the operation is delete, force to sync the resource message
+	//if the operation is response, force to sync the resource message, since the edgecore requests it
+	if !isDeleteMessage(msg) && msg.GetOperation() != beehiveModel.ResponseOperation {
+		item, exist, _ := nodeStore.GetByKey(messageKey)
+		// If the message doesn't exist in the store, then compare it with
+		// the version stored in the database
+		if !exist {
+			resourceNamespace, _ := messagelayer.GetNamespace(*rmsg)
+			resourceName, _ := messagelayer.GetResourceName(*rmsg)
+			resourceUID, err := GetMessageUID(*rmsg)
+			objectSyncName := synccontroller.BuildObjectSyncName(nodeID, resourceUID)
+			if err != nil {
+				klog.Errorf("fail to get message UID for message: %s", rmsg.Header.ID)
+				return
+			}
+			objectSync, err := q.objectSyncLister.ObjectSyncs(resourceNamespace).Get(objectSyncName)
+			if err == nil && objectSync.Status.ObjectResourceVersion != "" && synccontroller.CompareResourceVersion(msg.GetResourceVersion(), objectSync.Status.ObjectResourceVersion) <= 0 {
+				return
+			} else if err != nil && apierrors.IsNotFound(err) {
+				objectSync := &v1alpha1.ObjectSync{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: objectSyncName,
+					},
+					Spec: v1alpha1.ObjectSyncSpec{
+						ObjectAPIVersion: util.GetMessageAPIVersion(rmsg),
+						ObjectKind:       util.GetMessageResourceType(rmsg),
+						ObjectName:       resourceName,
+					},
+				}
+				objectSyncStatus, err := q.crdClient.ReliablesyncsV1alpha1().ObjectSyncs(resourceNamespace).Create(context.Background(), objectSync, metav1.CreateOptions{})
+				if err != nil {
+					klog.Errorf("Failed to create objectSync: %s, err: %v", objectSyncName, err)
+					return
+				}
+				objectSyncStatus.Status.ObjectResourceVersion = "0"
+				if _, err := q.crdClient.ReliablesyncsV1alpha1().ObjectSyncs(resourceNamespace).UpdateStatus(context.Background(), objectSyncStatus, metav1.UpdateOptions{}); err != nil {
+					klog.Errorf("Failed to update objectSync: %s, err: %v", objectSyncName, err)
+				}
+			}
+		} else {
+			// Check if message is older than already in store, if it is, discard it directly
+			msgInStore := item.(*beehiveModel.Message)
+			if isDeleteMessage(msgInStore) || synccontroller.CompareResourceVersion(rmsg.GetResourceVersion(), msgInStore.GetResourceVersion()) <= 0 {
+				return
+			}
+		}
+	}
+
+	if err := nodeStore.Add(rmsg); err != nil {
+		klog.Errorf("fail to add message %v nodeStore, err: %v", rmsg, err)
+		return
+	}
+	nodeQueue.Add(messageKey)
+}
 func (q *ChannelMessageQueue) addListMessageToQueue(nodeID string, msg *beehiveModel.Message) {
 	nodeListQueue := q.GetNodeListQueue(nodeID)
 	nodeListStore := q.GetNodeListStore(nodeID)

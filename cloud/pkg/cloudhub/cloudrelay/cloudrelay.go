@@ -19,6 +19,7 @@ var once sync.Once
 
 type CloudRelay struct {
 	enable  bool
+	status  bool
 	relayID string
 	// kubeClient    kubernetes.Interface
 	crdClient crdClientset.Interface
@@ -31,6 +32,7 @@ func InitCloudRelay() {
 	once.Do(func() {
 		RelayHandle = &CloudRelay{
 			enable:    true,
+			status:    true,
 			relayID:   "",
 			crdClient: client.GetCRDClient(),
 		}
@@ -74,6 +76,7 @@ func (relayHandle *CloudRelay) SealMessage(msg *beehiveModel.Message) (string, *
 	}
 	relayMsg := msg.Clone(msg)
 
+	relayMsg.Header.ID = msg.Header.ID
 	relayMsg.Router.Resource = resource
 	relayMsg.Router.Group = constants.RelayGroupName
 
@@ -86,12 +89,12 @@ func (relayHandle *CloudRelay) SealMessage(msg *beehiveModel.Message) (string, *
 }
 
 func (relayHandle *CloudRelay) UnsealMessage(container *mux.MessageContainer) *mux.MessageContainer {
-	var rcontainer *mux.MessageContainer
-	err := json.Unmarshal(container.Message.GetContent().([]byte), rcontainer)
+	var rcontainer mux.MessageContainer
+	err := json.Unmarshal(container.Message.GetContent().([]byte), &rcontainer)
 	if err != nil {
 		klog.V(4).Infof("RelayHandleServer Unmarshal failed", err)
 	}
-	return rcontainer
+	return &rcontainer
 }
 
 func (relayHandle *CloudRelay) GetRelayId() string {
@@ -99,4 +102,10 @@ func (relayHandle *CloudRelay) GetRelayId() string {
 }
 func (relayHandle *CloudRelay) SetRelayId(relayID string) {
 	relayHandle.relayID = relayID
+}
+func (relayHandle *CloudRelay) GetStatus() bool {
+	return relayHandle.status
+}
+func (relayHandle *CloudRelay) SetStatus(status bool) {
+	relayHandle.status = status
 }

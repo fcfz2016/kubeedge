@@ -1,6 +1,7 @@
 package relaycontroller
 
 import (
+	"encoding/json"
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	"github.com/kubeedge/beehive/pkg/core/model"
 	"github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/cloudrelay"
@@ -13,9 +14,10 @@ import (
 )
 
 const (
-	RelayCloseOperation  = "closerelay"
-	RelayOpenOperation   = "openrelay"
-	RelayUpdateOperation = "updaterelay"
+	RelayCloseOperation      = "closerelay"
+	RelayOpenOperation       = "openrelay"
+	RelayUpdateIDOperation   = "updateidrelay"
+	RelayUpdateDataOperation = "updatedatarelay"
 
 	GroupResource     = "relay"
 	ResourceTypeRelay = "relayres"
@@ -55,6 +57,8 @@ func (rc *RelayController) relayrcAdded(relayrc *v1.Relayrc) {
 	rc.relayrcManager.RelayInfo.Store(relayrc.Name, relayrc)
 	klog.Warningf("Relay added", relayrc.Spec.RelayID)
 	if relayrc.Spec.Open {
+		// todo: 等待中继节点返回确认信息后，异步设置status
+		cloudrelay.RelayHandle.SetStatus(true)
 		if isRelayIDExist(relayrc.Spec.RelayID) {
 			klog.Warningf("store RelayID")
 			// 下发
@@ -71,6 +75,7 @@ func (rc *RelayController) relayrcAdded(relayrc *v1.Relayrc) {
 
 func (rc *RelayController) relayrcDeleted(relayrc *v1.Relayrc) {
 	rc.relayrcManager.RelayInfo.Delete(relayrc.Name)
+	cloudrelay.RelayHandle.SetStatus(false)
 	klog.Warningf("Relay delete")
 	cloudrelay.RelayHandle.SetRelayId("")
 	// 下发关闭信息
@@ -93,6 +98,7 @@ func (rc *RelayController) relayrcUpdated(relayrc *v1.Relayrc) {
 			// 如果是开关改动
 			if isSwitchUpdated(cacheRelayrc.Spec.Open, relayrc.Spec.Open) {
 				if relayrc.Spec.Open {
+					cloudrelay.RelayHandle.SetStatus(true)
 					if isRelayIDExist(relayrc.Spec.RelayID) {
 						klog.Warningf("Relay updated", relayrc.Spec.RelayID)
 						msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayOpenOperation, relayrc)
@@ -102,6 +108,7 @@ func (rc *RelayController) relayrcUpdated(relayrc *v1.Relayrc) {
 						}
 					}
 				} else {
+					cloudrelay.RelayHandle.SetStatus(false)
 					klog.Warningf("Relay updated", relayrc.Spec.RelayID)
 					msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayCloseOperation, relayrc)
 					err := rc.messageLayer.Send(*msg)
@@ -111,12 +118,21 @@ func (rc *RelayController) relayrcUpdated(relayrc *v1.Relayrc) {
 				}
 			} else if isRelayIDUpdated(cacheRelayrc.Spec.RelayID, relayrc.Spec.RelayID) {
 				if relayrc.Spec.Open {
-					klog.Warningf("Relay updated", relayrc.Spec.RelayID)
+					klog.Warningf("Relay ID updated", relayrc.Spec.RelayID)
 					// 新的relayID信息发送给旧的relayID处理
-					msg := buildControllerMessage(cacheRelayrc.Spec.RelayID, relayrc.Namespace, RelayUpdateOperation, relayrc)
+					msg := buildControllerMessage(cacheRelayrc.Spec.RelayID, relayrc.Namespace, RelayUpdateIDOperation, relayrc)
 					err := rc.messageLayer.Send(*msg)
 					if err != nil {
 						klog.Warningf("relay update msg send error", err)
+					}
+				}
+			} else if isRelayDataUpdate(cacheRelayrc.Spec.Data, relayrc.Spec.Data) {
+				if relayrc.Spec.Open {
+					klog.Warningf("Relay Data updated", relayrc.Spec.RelayID)
+					msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayUpdateDataOperation, relayrc)
+					err := rc.messageLayer.Send(*msg)
+					if err != nil {
+						klog.Warningf("relay close msg send error", err)
 					}
 				}
 			} else {
@@ -125,6 +141,10 @@ func (rc *RelayController) relayrcUpdated(relayrc *v1.Relayrc) {
 			}
 		}
 	}
+}
+
+func isRelayDataUpdate(old v1.RelayData, new v1.RelayData) bool {
+	return !reflect.DeepEqual(old, new)
 }
 
 func isRelayIDExist(id string) bool {
@@ -157,8 +177,12 @@ func buildControllerMessage(nodeID, namespace, opr string, relayrc *v1.Relayrc) 
 	}
 
 	msg.BuildRouter(modules.RelayControllerModuleName, GroupResource, resource, opr)
-	content := relayrc.Spec
-	msg.Content = content
+	contentMsg, err := json.Marshal(relayrc.Spec)
+	if err != nil {
+		klog.V(4).Infof("RelayHandleServer Umarshal failed", err)
+	}
+
+	msg.Content = contentMsg
 
 	klog.Warningf("relaycontroller send msg", msg.Router.Operation)
 	return msg

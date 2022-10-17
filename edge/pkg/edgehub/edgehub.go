@@ -1,6 +1,7 @@
 package edgehub
 
 import (
+	"github.com/kubeedge/kubeedge/edge/pkg/edgehub/relay"
 	"sync"
 	"time"
 
@@ -43,6 +44,7 @@ func newEdgeHub(enable bool) *EdgeHub {
 // Register register edgehub
 func Register(eh *v1alpha1.EdgeHub, nodeName string) {
 	config.InitConfigure(eh, nodeName)
+	relay.InitHubRelay()
 	core.Register(newEdgeHub(eh.Enable))
 }
 
@@ -92,11 +94,43 @@ func (eh *EdgeHub) Start() {
 			time.Sleep(waitTime)
 			continue
 		}
+		//if !relayConfig.Config.GetStatus() || (relayConfig.Config.GetStatus() && relayConfig.Config.GetIsRelayNode()) {
+		//	err = eh.chClient.Init()
+		//	if err != nil {
+		//		klog.Errorf("connection failed: %v, will reconnect after %s", err, waitTime.String())
+		//		time.Sleep(waitTime)
+		//		continue
+		//	}
+		//} else {
+		//	klog.Errorf("non-relay no connection")
+		//}
+
 		// execute hook func after connect
 		eh.pubConnectInfo(true)
+		//if !relayConfig.Config.GetStatus() || (relayConfig.Config.GetStatus() && relayConfig.Config.GetIsRelayNode()) {
+		//	go eh.routeToEdge()
+		//}
 		go eh.routeToEdge()
 		go eh.routeToCloud()
 		go eh.keepalive()
+
+		// 如果开关处于开启阶段且本节点非中继节点，则越过正常连接阶段
+		//if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
+		//	<-relay.HubRelayChan.IsClose
+		//	klog.Warningf("edgehub relaystatus changes")
+		//	time.Sleep(waitTime)
+		//
+		//cleanChan:
+		//	for {
+		//		select {
+		//		case <-relay.HubRelayChan.IsClose:
+		//		default:
+		//			break cleanChan
+		//		}
+		//	}
+		//
+		//	continue // 跳出循环
+		//}
 
 		// wait the stop signal
 		// stop authinfo manager/websocket connection
