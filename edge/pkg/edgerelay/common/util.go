@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	ResourceTypeRelay         = "relayres"
+	ResourceTypeRelay         = "relayrcs"
 	ResourceSep               = "/"
 	ResourceNodeIDIndex       = 1
 	ResourceOperationIndex    = 1

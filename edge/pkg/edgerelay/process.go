@@ -173,8 +173,7 @@ func (er *EdgeRelay) MsgFromEdgeHub() {
 			time.Sleep(time.Second)
 		}
 		// 调用HandleMsgFromEdgeHub
-		//er.HandleMsgFromEdgeHub(&message)
-		klog.Infof("myedgerelay get message from edgehub: %v", message.Router.Group)
+		er.HandleMsgFromEdgeHub(&message)
 	}
 
 }

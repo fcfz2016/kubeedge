@@ -3,7 +3,6 @@ package channelq
 import (
 	"context"
 	"fmt"
-	"github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/cloudrelay"
 	"strings"
 	"sync"
 
@@ -66,7 +65,7 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 		msg, err := beehiveContext.Receive(model.SrcCloudHub)
 
 		msgResource := msg.GetResource()
-		if strings.Contains(msgResource, "relayres") {
+		if strings.Contains(msgResource, "relayrcs") {
 			// conn, ok := mh.nodeConns.Load(info.NodeID)
 			klog.Warningf("begin to handle relaycontroller message")
 			switch msg.Router.Operation {
@@ -78,9 +77,7 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 				break
 			case "updatedatarelay":
 			case "updateidrelay":
-				cloudrelay.RelayHandle.SetRelayId("nodeCDE")
-				oldId, rmsg := cloudrelay.RelayHandle.ChangeDesToRelay(&msg)
-				klog.Warningf("relaycontroller update", oldId, rmsg.Router.Resource)
+				klog.Warningf("relaycontroller update")
 			default:
 				klog.Warningf("relaycontroller default")
 				break
@@ -305,7 +302,7 @@ func getListMsgKey(obj interface{}) (string, error) {
 
 func isListResource(msg *beehiveModel.Message) bool {
 	msgResource := msg.GetResource()
-	if strings.Contains(msgResource, "relayres") {
+	if strings.Contains(msgResource, "relayrcs") {
 
 		return true
 	}

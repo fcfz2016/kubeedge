@@ -20,7 +20,7 @@ const (
 	RelayUpdateDataOperation = "updatedatarelay"
 
 	GroupResource     = "relay"
-	ResourceTypeRelay = "relayres"
+	ResourceTypeRelay = "relayrcs"
 )
 
 // 方法的具体实现
@@ -61,6 +61,7 @@ func (rc *RelayController) relayrcAdded(relayrc *v1.Relayrc) {
 		cloudrelay.RelayHandle.SetStatus(true)
 		if isRelayIDExist(relayrc.Spec.RelayID) {
 			klog.Warningf("store RelayID")
+			cloudrelay.RelayHandle.SetRelayId(relayrc.Spec.RelayID)
 			// 下发
 			msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayOpenOperation, relayrc)
 			err := rc.messageLayer.Send(*msg)
