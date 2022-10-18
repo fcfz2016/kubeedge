@@ -177,6 +177,7 @@ func (er *EdgeRelay) MsgFromEdgeHub() {
 			time.Sleep(time.Second)
 		}
 		// 调用HandleMsgFromEdgeHub
+		klog.Errorf("edgerelay receive message from edgehub: %v", message)
 		er.HandleMsgFromEdgeHub(&message)
 	}
 
