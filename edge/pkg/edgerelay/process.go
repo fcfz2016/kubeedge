@@ -16,7 +16,6 @@ import (
 	"github.com/kubeedge/kubeedge/edge/pkg/edgerelay/constants"
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager/dao"
 	v1 "github.com/kubeedge/kubeedge/pkg/apis/relays/v1"
-	beehiveModel "github.com/kubeedge/kubeedge/staging/src/github.com/kubeedge/beehive/pkg/core/model"
 	"github.com/kubeedge/viaduct/pkg/mux"
 	"io/ioutil"
 	"k8s.io/klog/v2"
@@ -404,7 +403,7 @@ func (er *EdgeRelay) GetAllAddress() map[string]v1.NodeAddress {
 }
 
 // 模拟cloud端下发时去掉目标node
-func trimMessage(msg *beehiveModel.Message) {
+func trimMessage(msg *model.Message) {
 	resource := msg.GetResource()
 	if strings.HasPrefix(resource, "node") {
 		tokens := strings.Split(resource, "/")
