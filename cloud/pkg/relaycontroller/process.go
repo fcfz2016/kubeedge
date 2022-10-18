@@ -183,7 +183,7 @@ func buildControllerMessage(nodeID, namespace, opr string, relayrc *v1.Relayrc) 
 		klog.V(4).Infof("RelayHandleServer Umarshal failed", err)
 	}
 
-	msg.Content = contentMsg
+	msg.FillBody(contentMsg)
 
 	klog.Warningf("relaycontroller send msg", msg.Router.Operation)
 	return msg

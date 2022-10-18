@@ -70,7 +70,7 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 			klog.Warningf("begin to handle relaycontroller message")
 			switch msg.Router.Operation {
 			case "openrelay":
-				klog.Warningf("relaycontroller open")
+				klog.Warningf("relaycontroller open", msg.GetResource())
 				break
 			case "closerelay":
 				klog.Warningf("reloycontroller close")
