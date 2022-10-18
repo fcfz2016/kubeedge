@@ -177,8 +177,13 @@ func (er *EdgeRelay) MsgFromEdgeHub() {
 			time.Sleep(time.Second)
 		}
 		// 调用HandleMsgFromEdgeHub
-		klog.Errorf("edgerelay receive message from edgehub: %v", message.GetResource())
-		er.HandleMsgFromEdgeHub(&message)
+		if common.IsFullResource(message.GetResource()) {
+			klog.Infof("edgerelay receive message from edgehub: %v", message.GetResource())
+			er.HandleMsgFromEdgeHub(&message)
+		} else {
+			klog.Errorf("edgerelay received message from edgehub is incomplete: %v", message.GetResource())
+		}
+
 	}
 
 }

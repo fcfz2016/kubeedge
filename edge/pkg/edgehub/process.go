@@ -84,9 +84,7 @@ func (*defaultHandler) Process(message *model.Message, clientHub clients.Adapter
 		beehiveContext.SendResp(*message)
 		return nil
 	}
-	if group == messagepkg.RelayGroupName {
-		beehiveContext.Send(modules.RelayGroup, *message)
-	} else if group == messagepkg.UserGroupName && message.GetSource() == "router_eventbus" {
+	if group == messagepkg.UserGroupName && message.GetSource() == "router_eventbus" {
 		beehiveContext.Send(modules.EventBusModuleName, *message)
 	} else if group == messagepkg.UserGroupName && message.GetSource() == "router_servicebus" {
 		beehiveContext.Send(modules.ServiceBusModuleName, *message)
@@ -120,7 +118,7 @@ func (eh *EdgeHub) routeToEdge() {
 			eh.reconnectChan <- struct{}{}
 			return
 		}
-
+		klog.Infof("edgehub receive msg from cloud(for relay test)", message.GetResource())
 		klog.V(4).Infof("[edgehub/routeToEdge] receive msg from cloud, msg:% +v", message)
 		err = eh.dispatch(message)
 		if err != nil {

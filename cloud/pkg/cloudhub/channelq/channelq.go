@@ -63,7 +63,12 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 		default:
 		}
 		msg, err := beehiveContext.Receive(model.SrcCloudHub)
-
+		klog.V(4).Infof("[cloudhub] dispatchMessage to edge: %+v", msg)
+		if err != nil {
+			klog.Info("receive not Message format message")
+			continue
+		}
+		
 		msgResource := msg.GetResource()
 		if strings.Contains(msgResource, "relayrcs") {
 			// conn, ok := mh.nodeConns.Load(info.NodeID)
@@ -83,11 +88,7 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 				break
 			}
 		}
-		klog.V(4).Infof("[cloudhub] dispatchMessage to edge: %+v", msg)
-		if err != nil {
-			klog.Info("receive not Message format message")
-			continue
-		}
+
 		nodeID, err := GetNodeID(&msg)
 		if nodeID == "" || err != nil {
 			klog.Warning("node id is not found in the message")

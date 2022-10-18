@@ -35,3 +35,11 @@ func GetNodeID(resource string) string {
 	}
 	return sli[ResourceNodeIDIndex]
 }
+
+func IsFullResource(resource string) bool {
+	sli := strings.Split(resource, ResourceSep)
+	if len(sli) < 5 {
+		return false
+	}
+	return true
+}
