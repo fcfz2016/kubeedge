@@ -177,13 +177,13 @@ func buildControllerMessage(nodeID, namespace, opr string, relayrc *v1.Relayrc) 
 		return nil
 	}
 
-	msg.BuildRouter(modules.RelayControllerModuleName, GroupResource, resource, opr)
+	msg = msg.BuildRouter(modules.RelayControllerModuleName, GroupResource, resource, opr)
 	contentMsg, err := json.Marshal(relayrc.Spec)
 	if err != nil {
 		klog.V(4).Infof("RelayHandleServer Umarshal failed", err)
 	}
 
-	msg.FillBody(contentMsg)
+	msg.Content = contentMsg
 
 	klog.Warningf("relaycontroller send msg", msg.Router.Operation)
 	return msg
