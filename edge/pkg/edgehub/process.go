@@ -63,6 +63,7 @@ func (*defaultHandler) Filter(message *model.Message) bool {
 }
 
 func (*defaultHandler) Process(message *model.Message, clientHub clients.Adapter) error {
+	klog.Infof("cloud-edge relay msg in edge-process", message.GetResource())
 	group := message.GetGroup()
 
 	md := ""

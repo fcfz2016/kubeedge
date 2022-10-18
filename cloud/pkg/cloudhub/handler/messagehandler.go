@@ -340,6 +340,7 @@ func (mh *MessageHandle) PubToController(info *model.HubInfo, msg *beehiveModel.
 }
 
 func (mh *MessageHandle) hubIoWrite(hi hubio.CloudHubIO, nodeID string, msg *beehiveModel.Message) error {
+	klog.Infof("msg in hubIoWrite", msg.GetResource())
 	value, ok := mh.nodeLocks.Load(nodeID)
 	if !ok {
 		return fmt.Errorf("node disconnected")
@@ -448,6 +449,7 @@ func (mh *MessageHandle) ListMessageWriteLoop(info *model.HubInfo, stopServe cha
 			continue
 		}
 		msg, ok := obj.(*beehiveModel.Message)
+		klog.Infof("msg in ListMessageWriteLoop", msg.GetResource())
 		if !ok {
 			klog.Errorf("list message type %T is invalid for node: %s", obj, info.NodeID)
 			continue
