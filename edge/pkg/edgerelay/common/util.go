@@ -9,8 +9,7 @@ const (
 	ResourceTypeRelay         = "relayrcs"
 	ResourceSep               = "/"
 	ResourceNodeIDIndex       = 1
-	ResourceOperationIndex    = 1
-	ResourceResourceTypeIndex = 3
+	ResourceResourceTypeIndex = 1
 
 	RelayCloseOperation      = "closerelay"
 	RelayOpenOperation       = "openrelay"
@@ -38,7 +37,7 @@ func GetNodeID(resource string) string {
 
 func IsFullResource(resource string) bool {
 	sli := strings.Split(resource, ResourceSep)
-	if len(sli) < 5 {
+	if len(sli) < 2 {
 		return false
 	}
 	return true

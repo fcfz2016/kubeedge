@@ -15,8 +15,6 @@ import (
 	"github.com/kubeedge/kubeedge/edge/pkg/edgehub/clients"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgehub/common/msghandler"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgehub/config"
-
-	relayConfig "github.com/kubeedge/kubeedge/edge/pkg/edgerelay/config"
 )
 
 var groupMap = map[string]string{
@@ -63,7 +61,6 @@ func (*defaultHandler) Filter(message *model.Message) bool {
 }
 
 func (*defaultHandler) Process(message *model.Message, clientHub clients.Adapter) error {
-	klog.Infof("cloud-edge relay msg in edge-process", message.GetResource())
 	group := message.GetGroup()
 
 	md := ""
@@ -150,10 +147,10 @@ func (eh *EdgeHub) routeToCloud() {
 		}
 		message, err := beehiveContext.Receive(modules.EdgeHubModuleName)
 		// 如果是中继状态并且不是中继节点，就把信息转发给中继模块处理
-		if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
-			beehiveContext.Send(modules.EdgeRelayModuleName, message)
-			return
-		}
+		//if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
+		//	beehiveContext.Send(modules.EdgeRelayModuleName, message)
+		//	return
+		//}
 		if err != nil {
 			klog.Errorf("failed to receive message from edge: %v", err)
 			time.Sleep(time.Second)
@@ -188,10 +185,10 @@ func (eh *EdgeHub) keepalive() {
 			BuildRouter(modules.EdgeHubModuleName, "resource", "node", messagepkg.OperationKeepalive).
 			FillBody("ping")
 
-		if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
-			beehiveContext.Send(modules.EdgeRelayModuleName, *msg)
-			return
-		}
+		//if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
+		//	beehiveContext.Send(modules.EdgeRelayModuleName, *msg)
+		//	return
+		//}
 		// post message to cloud hub
 		err := eh.sendToCloud(*msg)
 		if err != nil {

@@ -16,11 +16,13 @@ import (
 	"github.com/kubeedge/kubeedge/edge/pkg/edgerelay/constants"
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager/dao"
 	v1 "github.com/kubeedge/kubeedge/pkg/apis/relays/v1"
+	beehiveModel "github.com/kubeedge/kubeedge/staging/src/github.com/kubeedge/beehive/pkg/core/model"
 	"github.com/kubeedge/viaduct/pkg/mux"
 	"io/ioutil"
 	"k8s.io/klog/v2"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -202,7 +204,7 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 		case common.RelayOpenOperation:
 			er.Save(status, relayID, relayData)
 			er.SetIsRelayNodeStatus()
-			er.ContinueEdgeHub()
+			//er.ContinueEdgeHub()
 			klog.Infof("handle relayopenoperation", config.Config.SetIsRelayNode)
 			break
 		case common.RelayUpdateDataOperation:
@@ -233,14 +235,25 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 		//	}
 		//}
 	} else {
+		// 中继节点情况下：1、接收cloud传来的relay信息
 		if config.Config.GetNodeID() == config.Config.GetRelayID() {
+			var msgFromConent model.Message
+			err := json.Unmarshal(msg.GetContent().([]byte), &msgFromConent)
+			if err != nil {
+				klog.Errorf("edgerelay unmarshal msg from cloud to edge failed")
+			}
+
 			container := &mux.MessageContainer{
 				Header:  map[string][]string{},
-				Message: msg,
+				Message: &msgFromConent,
 			}
-			nodeID := common.GetNodeID(msg.GetResource())
+			nodeID := common.GetNodeID(msgFromConent.GetResource())
+
+			trimMessage(&msgFromConent)
+
 			nodeAddr := er.GetAddress(nodeID)
 			er.client(nodeAddr, container)
+			// 非中继节点情况下：2、将需要转发给cloud的信息，或keepalive信息传给中继节点处理
 		} else {
 			// else 封层container格式，添加自身nodeID和projectID，目标nodeID标为relayID
 			container := &mux.MessageContainer{
@@ -388,4 +401,17 @@ func (er *EdgeRelay) GetAddress(nodeID string) v1.NodeAddress {
 // 从文件中读取所有的nodeID：addr键值对，返回一个map
 func (er *EdgeRelay) GetAllAddress() map[string]v1.NodeAddress {
 	return config.Config.GetData().AddrData
+}
+
+// 模拟cloud端下发时去掉目标node
+func trimMessage(msg *beehiveModel.Message) {
+	resource := msg.GetResource()
+	if strings.HasPrefix(resource, "node") {
+		tokens := strings.Split(resource, "/")
+		if len(tokens) < 3 {
+			klog.Warningf("event resource %s starts with node but length less than 3", resource)
+		} else {
+			msg.SetResourceOperation(strings.Join(tokens[2:], "/"), msg.GetOperation())
+		}
+	}
 }
