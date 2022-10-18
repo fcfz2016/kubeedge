@@ -31,6 +31,7 @@ func (er *EdgeRelay) Load() {
 }
 
 func (er *EdgeRelay) Save(status bool, relayID string, relayData v1.RelayData) {
+	klog.Infof("start to save relay msg")
 	er.SaveRelayStatus(status)
 	er.SaveRelayID(relayID)
 	er.SaveDate(relayData)
@@ -59,6 +60,7 @@ func (er *EdgeRelay) LoadRelayStatus() {
 	} else {
 		config.Config.SetStatus(false)
 	}
+	klog.Errorf("load relayStatus", result[0])
 }
 func (er *EdgeRelay) SaveRelayStatus(relayStatus bool) {
 	klog.Errorf("save relayStatus")
@@ -107,6 +109,7 @@ func (er *EdgeRelay) LoadRelayID() {
 	}
 	var result = *metas
 	config.Config.SetRelayID(result[0])
+	klog.Errorf("load relayID", result[0])
 }
 
 // 之后用于控制edgehub是否可以直连，在判断直连时，必须满足！isrelaynode&&relaystatus才确定为不直连
@@ -156,6 +159,7 @@ func (er *EdgeRelay) LoadData() {
 		klog.Errorf("unmarshal relay data to json failed")
 	}
 	config.Config.SetData(data)
+	klog.Errorf("load relaydata", data.AddrData["kind-worker2"].IP)
 }
 
 func (er *EdgeRelay) MsgFromEdgeHub() {
@@ -193,6 +197,7 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 			er.Save(status, relayID, relayData)
 			er.SetIsRelayNodeStatus()
 			er.ContinueEdgeHub()
+			klog.Infof("handle relayopenoperation", config.Config.SetIsRelayNode)
 			break
 		case common.RelayUpdateDataOperation:
 			er.SaveDate(relayData)
@@ -207,18 +212,20 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 			}
 			break
 		}
+		// for test
+		er.Load()
 		// 给其他节点下发中继信息
-		if config.Config.GetNodeID() == config.Config.GetRelayID() {
-			container := &mux.MessageContainer{
-				Header:  map[string][]string{},
-				Message: msg,
-			}
-			container.Header.Add("relay_mark", common.ResourceTypeRelay)
-			nodeMap := er.GetAllAddress()
-			for _, v := range nodeMap {
-				er.client(v, container)
-			}
-		}
+		//if config.Config.GetNodeID() == config.Config.GetRelayID() {
+		//	container := &mux.MessageContainer{
+		//		Header:  map[string][]string{},
+		//		Message: msg,
+		//	}
+		//	container.Header.Add("relay_mark", common.ResourceTypeRelay)
+		//	nodeMap := er.GetAllAddress()
+		//	for _, v := range nodeMap {
+		//		er.client(v, container)
+		//	}
+		//}
 	} else {
 		if config.Config.GetNodeID() == config.Config.GetRelayID() {
 			container := &mux.MessageContainer{
