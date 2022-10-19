@@ -117,6 +117,7 @@ func (eh *EdgeHub) routeToEdge() {
 			return
 		}
 		klog.Infof("edgehub receive msg from cloud(for relay test)", message.GetResource())
+		klog.Infof("edgehub receive msg from cloud(for relay test)", message.GetContent())
 		klog.V(4).Infof("[edgehub/routeToEdge] receive msg from cloud, msg:% +v", message)
 		err = eh.dispatch(message)
 		if err != nil {
