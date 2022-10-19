@@ -45,6 +45,7 @@ func (er *EdgeRelay) UnMarshalMsg(msg *model.Message) (bool, string, v1.RelayDat
 	if !ok {
 		klog.Errorf("edgerelay assert failed", v)
 	}
+	klog.Infof("edgerelay unmarshal v", v)
 	err := json.Unmarshal([]byte(v), &relayrc)
 	if err != nil {
 		klog.V(4).Infof("RelayHandleServer Unmarshal failed", err)
