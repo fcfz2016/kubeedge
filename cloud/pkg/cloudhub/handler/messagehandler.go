@@ -473,6 +473,7 @@ func (mh *MessageHandle) ListMessageWriteLoop(info *model.HubInfo, stopServe cha
 
 		trimMessage(msg)
 
+		klog.Infof("list send message begin (test for relay)", msg.GetResource())
 		conn, ok := mh.nodeConns.Load(info.NodeID)
 		if !ok {
 			continue
@@ -481,7 +482,7 @@ func (mh *MessageHandle) ListMessageWriteLoop(info *model.HubInfo, stopServe cha
 		if err := mh.send(conn.(hubio.CloudHubIO), info, msg); err != nil {
 			klog.Errorf("failed to send to cloudhub, err: %v", err)
 		}
-
+		klog.Infof("list send message end (test for relay)", msg.GetResource())
 		// delete successfully sent events from the queue/store
 		if err := nodeListStore.Delete(msg); err != nil {
 			klog.Errorf("failed to delete msg from store, err: %v", err)

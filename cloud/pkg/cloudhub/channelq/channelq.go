@@ -68,7 +68,7 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 			klog.Info("receive not Message format message")
 			continue
 		}
-		
+
 		msgResource := msg.GetResource()
 		if strings.Contains(msgResource, "relayrcs") {
 			// conn, ok := mh.nodeConns.Load(info.NodeID)
@@ -304,7 +304,6 @@ func getListMsgKey(obj interface{}) (string, error) {
 func isListResource(msg *beehiveModel.Message) bool {
 	msgResource := msg.GetResource()
 	if strings.Contains(msgResource, "relayrcs") {
-
 		return true
 	}
 	if strings.Contains(msgResource, beehiveModel.ResourceTypePodlist) ||
