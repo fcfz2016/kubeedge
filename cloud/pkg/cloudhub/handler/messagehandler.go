@@ -473,12 +473,11 @@ func (mh *MessageHandle) ListMessageWriteLoop(info *model.HubInfo, stopServe cha
 
 		trimMessage(msg)
 
-		klog.Infof("list send message begin (test for relay)", msg.GetResource())
 		conn, ok := mh.nodeConns.Load(info.NodeID)
 		if !ok {
 			continue
 		}
-
+		klog.Infof("list send message begin (test for relay), v%", msg.GetContent())
 		if err := mh.send(conn.(hubio.CloudHubIO), info, msg); err != nil {
 			klog.Errorf("failed to send to cloudhub, err: %v", err)
 		}
