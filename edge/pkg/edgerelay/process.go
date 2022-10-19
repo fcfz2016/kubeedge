@@ -41,7 +41,7 @@ func (er *EdgeRelay) Save(status bool, relayID string, relayData v1.RelayData) {
 func (er *EdgeRelay) UnMarshalMsg(msg *model.Message) (bool, string, v1.RelayData) {
 	var relayrc v1.RelayrcSpec
 
-	err := json.Unmarshal(msg.GetContent().([]byte), &relayrc)
+	err := json.Unmarshal([]byte(msg.GetContent().(string)), &relayrc)
 	if err != nil {
 		klog.V(4).Infof("RelayHandleServer Unmarshal failed", err)
 	}
