@@ -378,8 +378,9 @@ func (er *EdgeRelay) MsgToOtherModule(msg *model.Message) {
 }
 
 func (er *EdgeRelay) server() {
+	klog.Infof("edgerelay server begin")
 	http.HandleFunc("/postMessage", er.receiveMessage)
-	err := http.ListenAndServe("127.0.0.1:9090", nil)
+	err := http.ListenAndServe(":9090", nil)
 	if err != nil {
 		fmt.Println("net.Listen error :", err)
 	}
@@ -423,11 +424,13 @@ func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer
 	}
 
 	body := bytes.NewBuffer(b)
-	request, err := http.Post(url, contentType, body)
+	_, err = http.Post(url, contentType, body)
+
 	if err != nil {
-		fmt.Println("Post failed:", err)
+		klog.Errorf("Post failed:", err)
+		return
+		// todo: 多于某值的节点未收到的处理措施，以及失败重试
 	}
-	defer request.Body.Close()
 
 }
 
