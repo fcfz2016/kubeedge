@@ -123,7 +123,7 @@ func (er *EdgeRelay) SaveRelayID(relayID string) {
 		klog.Errorf("save relayId failed", err)
 		return
 	}
-	klog.Errorf("save relayID", config.Config.GetNodeID(), config.Config.GetRelayID())
+	klog.Infof("save relayID, nodeid:%v, relayid:%v", config.Config.GetNodeID(), config.Config.GetRelayID())
 }
 func (er *EdgeRelay) LoadRelayID() {
 	er.SetIsRelayNodeStatus()
@@ -167,7 +167,7 @@ func (er *EdgeRelay) SaveDate(data v1.RelayData) {
 		Value: string(dataJson)}
 	err = dao.InsertOrUpdate(meta)
 	if err != nil {
-		klog.Errorf("save relayId failed", err)
+		klog.Errorf("save relayData failed", err)
 		return
 	}
 }
