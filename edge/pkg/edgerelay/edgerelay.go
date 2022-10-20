@@ -45,7 +45,7 @@ func (er *EdgeRelay) Start() {
 	// er.Load()
 
 	// 不需要开协程 er.MsgFromOtherEdge()
-	// er.server()
+	er.server()
 	go er.MsgFromEdgeHub()
 
 }

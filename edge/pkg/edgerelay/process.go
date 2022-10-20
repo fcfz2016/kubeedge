@@ -250,6 +250,7 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 
 		// 给其他节点下发中继信息
 		if config.Config.GetNodeID() == config.Config.GetRelayID() {
+			klog.Infof("send relay_mark msg to non-relay node")
 			container := &mux.MessageContainer{
 				Header:  map[string][]string{},
 				Message: msg,
@@ -383,6 +384,7 @@ func (er *EdgeRelay) server() {
 	}
 }
 func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Request) {
+	klog.Infof("edgerelay receive from server")
 	if request.Method == constants.POST {
 		body, err := ioutil.ReadAll(request.Body)
 
@@ -398,6 +400,7 @@ func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Re
 		if err != nil {
 			fmt.Println("json format error:", err)
 		}
+		klog.Infof("edgerelay server msg to handle")
 		er.HandleMsgFromOtherEdge(&container)
 
 	}
