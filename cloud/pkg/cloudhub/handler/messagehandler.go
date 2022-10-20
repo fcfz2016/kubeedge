@@ -341,6 +341,7 @@ func (mh *MessageHandle) PubToController(info *model.HubInfo, msg *beehiveModel.
 
 func (mh *MessageHandle) hubIoWrite(hi hubio.CloudHubIO, nodeID string, msg *beehiveModel.Message) error {
 	klog.Infof("msg in hubIoWrite", msg.GetResource())
+	klog.Infof("msg in hubIoWrite", msg.GetContent())
 	value, ok := mh.nodeLocks.Load(nodeID)
 	if !ok {
 		return fmt.Errorf("node disconnected")
@@ -481,7 +482,7 @@ func (mh *MessageHandle) ListMessageWriteLoop(info *model.HubInfo, stopServe cha
 		if err := mh.send(conn.(hubio.CloudHubIO), info, msg); err != nil {
 			klog.Errorf("failed to send to cloudhub, err: %v", err)
 		}
-		klog.Infof("list send message end (test for relay)", msg.GetResource())
+
 		// delete successfully sent events from the queue/store
 		if err := nodeListStore.Delete(msg); err != nil {
 			klog.Errorf("failed to delete msg from store, err: %v", err)

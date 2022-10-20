@@ -2,6 +2,7 @@ package edgerelay
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
@@ -38,20 +39,28 @@ func (er *EdgeRelay) Save(status bool, relayID string, relayData v1.RelayData) {
 	er.SaveDate(relayData)
 }
 
-func (er *EdgeRelay) UnMarshalMsg(msg *model.Message) (bool, string, v1.RelayData) {
+func (er *EdgeRelay) UnMarshalMsg(msg *model.Message) (bool, string, v1.RelayData, error) {
 	var relayrc v1.RelayrcSpec
 
 	v, ok := msg.GetContent().(string)
 	if !ok {
 		klog.Errorf("edgerelay assert failed", v)
+		return false, "", v1.RelayData{}, fmt.Errorf("edgerelay assert failed")
 	}
-	klog.Infof("edgerelay unmarshal v", v)
-	err := json.Unmarshal([]byte(v), &relayrc)
+	decodeBytes, err := base64.StdEncoding.DecodeString(v)
 	if err != nil {
-		klog.Infof("RelayHandleServer Unmarshal failed", err)
+		klog.Errorf("create volume decode with error: %v", err)
+		return false, "", v1.RelayData{}, err
 	}
 
-	return relayrc.Open, relayrc.RelayID, relayrc.Data
+	klog.Infof("edgerelay unmarshal %v", decodeBytes)
+	err = json.Unmarshal(decodeBytes, &relayrc)
+	if err != nil {
+		klog.Infof("RelayHandleServer Unmarshal failed", err)
+		return false, "", v1.RelayData{}, err
+	}
+
+	return relayrc.Open, relayrc.RelayID, relayrc.Data, nil
 }
 
 func (er *EdgeRelay) LoadRelayStatus() {
@@ -201,7 +210,10 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 	// 肯定是关于中继类型的信息，才会由EdgeHub发给Relay处理
 	// 查看是否为中继模块下发节点信息
 	if common.GetResourceType(msg.GetResource()) == common.ResourceTypeRelay {
-		status, relayID, relayData := er.UnMarshalMsg(msg)
+		status, relayID, relayData, err := er.UnMarshalMsg(msg)
+		if err != nil {
+			return
+		}
 		switch msg.Router.Operation {
 		case common.RelayCloseOperation:
 			er.SaveRelayStatus(false)
@@ -281,7 +293,10 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 	if relayMark != "" {
 		klog.Infof("non-relay node get relayID")
 		msg := container.Message
-		status, relayID, relayData := er.UnMarshalMsg(msg)
+		status, relayID, relayData, err := er.UnMarshalMsg(msg)
+		if err != nil {
+			return
+		}
 		switch msg.Router.Operation {
 		case common.RelayCloseOperation:
 			er.SaveRelayStatus(false)
