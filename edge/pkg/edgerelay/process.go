@@ -27,6 +27,7 @@ import (
 )
 
 func (er *EdgeRelay) Load() {
+	klog.Infof("start to load relay msg")
 	er.LoadRelayStatus()
 	er.LoadRelayID()
 	er.LoadData()
@@ -41,26 +42,35 @@ func (er *EdgeRelay) Save(status bool, relayID string, relayData v1.RelayData) {
 
 func (er *EdgeRelay) UnMarshalMsg(msg *model.Message) (bool, string, v1.RelayData, error) {
 	var relayrc v1.RelayrcSpec
-
-	v, ok := msg.GetContent().(string)
-	if !ok {
-		klog.Errorf("edgerelay assert failed", v)
-		return false, "", v1.RelayData{}, fmt.Errorf("edgerelay assert failed")
-	}
-	decodeBytes, err := base64.StdEncoding.DecodeString(v)
+	decodeBytes, err := Decode(msg)
 	if err != nil {
-		klog.Errorf("create volume decode with error: %v", err)
+		klog.Infof("RelayHandleServer:%v", err)
 		return false, "", v1.RelayData{}, err
 	}
-
-	klog.Infof("edgerelay unmarshal %v", decodeBytes)
+	klog.Infof("edgerelay encode %v", decodeBytes)
 	err = json.Unmarshal(decodeBytes, &relayrc)
 	if err != nil {
-		klog.Infof("RelayHandleServer Unmarshal failed", err)
+		klog.Infof("RelayHandleServer:%v", err)
 		return false, "", v1.RelayData{}, err
 	}
 
 	return relayrc.Open, relayrc.RelayID, relayrc.Data, nil
+}
+
+func (er *EdgeRelay) UnmarshalForForward(msg *model.Message) (*model.Message, error) {
+	var rmsg model.Message
+	decodeBytes, err := Decode(msg)
+	if err != nil {
+		klog.Infof("UnmarshalForForward:%v", err)
+		return msg, err
+	}
+	klog.Infof("UnmarshalForForward encode %v", decodeBytes)
+	err = json.Unmarshal(decodeBytes, &rmsg)
+	if err != nil {
+		klog.Infof("UnmarshalForForward:%v", err)
+		return msg, err
+	}
+	return &rmsg, nil
 }
 
 func (er *EdgeRelay) LoadRelayStatus() {
@@ -76,7 +86,7 @@ func (er *EdgeRelay) LoadRelayStatus() {
 	} else {
 		config.Config.SetStatus(false)
 	}
-	klog.Errorf("load relayStatus", result[0])
+	klog.Infof("load relayStatus", result[0])
 }
 func (er *EdgeRelay) SaveRelayStatus(relayStatus bool) {
 	klog.Errorf("save relayStatus")
@@ -125,7 +135,7 @@ func (er *EdgeRelay) LoadRelayID() {
 	}
 	var result = *metas
 	config.Config.SetRelayID(result[0])
-	klog.Errorf("load relayID", result[0])
+	klog.Infof("load relayID", result[0])
 }
 
 // 之后用于控制edgehub是否可以直连，在判断直连时，必须满足！isrelaynode&&relaystatus才确定为不直连
@@ -175,7 +185,7 @@ func (er *EdgeRelay) LoadData() {
 		klog.Errorf("unmarshal relay data to json failed")
 	}
 	config.Config.SetData(data)
-	klog.Errorf("load relaydata", data.AddrData["kind-worker2"].IP)
+	klog.Errorf("load relaydata", len(data.AddrData))
 }
 
 func (er *EdgeRelay) MsgFromEdgeHub() {
@@ -222,8 +232,7 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 		case common.RelayOpenOperation:
 			er.Save(status, relayID, relayData)
 			er.SetIsRelayNodeStatus()
-			//er.ContinueEdgeHub()
-			klog.Infof("handle relayopenoperation", config.Config.SetIsRelayNode)
+			er.ContinueEdgeHub()
 			break
 		case common.RelayUpdateDataOperation:
 			er.SaveDate(relayData)
@@ -238,36 +247,38 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 			}
 			break
 		}
-		// for test
-		er.Load()
+
 		// 给其他节点下发中继信息
-		//if config.Config.GetNodeID() == config.Config.GetRelayID() {
-		//	container := &mux.MessageContainer{
-		//		Header:  map[string][]string{},
-		//		Message: msg,
-		//	}
-		//	container.Header.Add("relay_mark", common.ResourceTypeRelay)
-		//	nodeMap := er.GetAllAddress()
-		//	for _, v := range nodeMap {
-		//		er.client(v, container)
-		//	}
-		//}
+		if config.Config.GetNodeID() == config.Config.GetRelayID() {
+			container := &mux.MessageContainer{
+				Header:  map[string][]string{},
+				Message: msg,
+			}
+			container.Header.Add("relay_mark", common.ResourceTypeRelay)
+			nodeMap := er.GetAllAddress()
+			for k, v := range nodeMap {
+				// 给非本节点传递信息
+				if k != config.Config.GetNodeID() {
+					er.client(v, container)
+				}
+			}
+		}
 	} else {
 		// 中继节点情况下：1、接收cloud传来的relay信息
 		if config.Config.GetNodeID() == config.Config.GetRelayID() {
-			var msgFromConent model.Message
-			err := json.Unmarshal(msg.GetContent().([]byte), &msgFromConent)
+			msgFromConent, err := er.UnmarshalForForward(msg)
 			if err != nil {
-				klog.Errorf("edgerelay unmarshal msg from cloud to edge failed")
+				klog.Errorf("edgerelay unmarshal msg from cloud to edge failed, %v", err)
 			}
 
 			container := &mux.MessageContainer{
 				Header:  map[string][]string{},
-				Message: &msgFromConent,
+				Message: msgFromConent,
 			}
 			nodeID := common.GetNodeID(msgFromConent.GetResource())
 
-			trimMessage(&msgFromConent)
+			trimMessage(msgFromConent)
+			Encode(msgFromConent)
 
 			nodeAddr := er.GetAddress(nodeID)
 			er.client(nodeAddr, container)
@@ -289,12 +300,14 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 
 func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 	relayMark := container.Header.Get("relay_mark")
+	var msg *model.Message
 	// 如果是节点标记信息
 	if relayMark != "" {
-		klog.Infof("non-relay node get relayID")
-		msg := container.Message
+		klog.Infof("non-relay node get relayMsg")
+		msg = container.Message
 		status, relayID, relayData, err := er.UnMarshalMsg(msg)
 		if err != nil {
+			klog.Errorf("relay_mark failed", err)
 			return
 		}
 		switch msg.Router.Operation {
@@ -324,8 +337,8 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 	} else {
 		// else if(nodeID==relayID) 对信息进行封装，发送一个Operation为uploadrelay的Message，调用MsgToEdgeHub
 		// 		else 对消息进行拆解，调用MsgToEdgeHub
-		var msg *model.Message
-		// ToCloud
+
+		// 本节点是中继节点，负责把消息发给cloud端，ToCloud
 		if config.Config.GetNodeID() == config.Config.GetRelayID() {
 			msg = container.Message.Clone(container.Message)
 			msg.SetResourceOperation(msg.GetResource(), constants.OpUploadRelayMessage)
@@ -337,7 +350,7 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 			msg.Content = contentMsg
 			er.MsgToEdgeHub(msg)
 		} else {
-			// ToOtherModule
+			// 本节点非中继节点，ToOtherModule
 			msg = container.Message
 			er.MsgToOtherModule(msg)
 		}
@@ -435,4 +448,22 @@ func trimMessage(msg *model.Message) {
 			msg.SetResourceOperation(strings.Join(tokens[2:], "/"), msg.GetOperation())
 		}
 	}
+}
+
+func Decode(msg *model.Message) ([]byte, error) {
+	v, ok := msg.GetContent().(string)
+	if !ok {
+		return nil, fmt.Errorf("assert failed")
+	}
+	decodeBytes, err := base64.StdEncoding.DecodeString(v)
+	if err != nil {
+		return nil, fmt.Errorf("encode failed")
+	}
+
+	return decodeBytes, nil
+}
+
+func Encode(msg *model.Message) {
+	encodeString := base64.StdEncoding.EncodeToString(msg.GetContent().([]byte))
+	msg.Content = encodeString
 }
