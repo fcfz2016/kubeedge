@@ -110,7 +110,6 @@ func (er *EdgeRelay) SaveRelayStatus(relayStatus bool) {
 }
 
 func (er *EdgeRelay) SaveRelayID(relayID string) {
-	klog.Errorf("save relayID")
 	er.SetIsRelayNodeStatus()
 	// 更新config和数据库
 	config.Config.SetRelayID(relayID)
@@ -124,6 +123,7 @@ func (er *EdgeRelay) SaveRelayID(relayID string) {
 		klog.Errorf("save relayId failed", err)
 		return
 	}
+	klog.Errorf("save relayID", config.Config.GetNodeID(), config.Config.GetRelayID())
 }
 func (er *EdgeRelay) LoadRelayID() {
 	er.SetIsRelayNodeStatus()
