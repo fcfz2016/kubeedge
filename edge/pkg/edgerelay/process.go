@@ -232,7 +232,7 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 		case common.RelayOpenOperation:
 			er.Save(status, relayID, relayData)
 			er.SetIsRelayNodeStatus()
-			er.ContinueEdgeHub()
+			// er.ContinueEdgeHub()
 			break
 		case common.RelayUpdateDataOperation:
 			er.SaveDate(relayData)
@@ -249,8 +249,9 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 		}
 
 		// 给其他节点下发中继信息
+		klog.Infof("send relay_mark msg to non-relay node1")
 		if config.Config.GetNodeID() == config.Config.GetRelayID() {
-			klog.Infof("send relay_mark msg to non-relay node")
+			klog.Infof("send relay_mark msg to non-relay node2")
 			container := &mux.MessageContainer{
 				Header:  map[string][]string{},
 				Message: msg,
