@@ -190,6 +190,7 @@ func (er *EdgeRelay) LoadData() {
 
 func (er *EdgeRelay) MsgFromEdgeHub() {
 	for {
+		klog.Infof("MsgFromEdgeHub begin")
 		select {
 		case <-beehiveContext.Done():
 			klog.Warning("EdgeRelay MsgFromEdgeHub stop")
@@ -210,9 +211,9 @@ func (er *EdgeRelay) MsgFromEdgeHub() {
 		} else {
 			klog.Errorf("edgerelay received message from edgehub is incomplete: %v", message.GetResource())
 		}
-
+		klog.Infof("MsgFromEdgeHub end")
 	}
-
+	klog.Infof("MsgFromEdgeHub last end")
 }
 
 // HandleMsgFromEdgeHub
@@ -435,9 +436,9 @@ func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer
 	_, err = http.Post(url, contentType, body)
 
 	if err != nil {
+		// todo: 多于某值的节点未收到的处理措施，以及失败重试
 		klog.Errorf("Post failed:", err)
 		return
-		// todo: 多于某值的节点未收到的处理措施，以及失败重试
 	}
 
 }
