@@ -419,6 +419,7 @@ func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Re
 
 // client
 func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer) {
+	klog.Infof("Relay clinet begin")
 	ip := addr.IP
 	port := addr.Port
 
@@ -440,7 +441,7 @@ func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer
 		klog.Errorf("Post failed:", err)
 		return
 	}
-
+	klog.Infof("Relay clinet begin")
 }
 
 func (er *EdgeRelay) GetAddress(nodeID string) v1.NodeAddress {
