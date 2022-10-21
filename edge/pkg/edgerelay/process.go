@@ -419,6 +419,7 @@ func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Re
 		// todo:同步或异步，返回200状态语句位置问题
 		writer.WriteHeader(http.StatusOK)
 		writer.Write([]byte("receive successfully"))
+
 		er.HandleMsgFromOtherEdge(&container)
 
 	}
@@ -426,7 +427,7 @@ func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Re
 
 // client
 func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer) {
-	klog.Infof("Relay clinet begin")
+	klog.Infof("Relay client begin")
 	ip := addr.IP
 	port := addr.Port
 
@@ -441,18 +442,23 @@ func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer
 	}
 
 	body := bytes.NewBuffer(b)
-	request, err := http.Post(url, contentType, body)
+	response, err := http.Post(url, contentType, body)
 
 	if err != nil {
 		// todo: 多于某值的节点未收到的处理措施，以及失败重试
 		klog.Errorf("Post failed:", err)
 		return
 	}
-	if request.StatusCode != http.StatusOK {
+	klog.Infof("relay r statuscode: %d", response.StatusCode)
+
+	repbody, err := ioutil.ReadAll(response.Body)
+	defer response.Body.Close()
+	klog.Infof("relay r body: %s", repbody)
+	if response.StatusCode != http.StatusOK {
 		klog.Errorf("client failed")
 		return
 	}
-	klog.Infof("Relay clinet end")
+	klog.Infof("Relay client end")
 }
 
 func (er *EdgeRelay) GetAddress(nodeID string) v1.NodeAddress {
