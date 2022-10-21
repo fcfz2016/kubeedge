@@ -407,7 +407,12 @@ func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Re
 			}
 		}
 
-		defer request.Body.Close()
+		defer func() {
+			err := request.Body.Close()
+			if err != nil {
+				klog.Errorf("Body close err: %v", err)
+			}
+		}()
 
 		var container mux.MessageContainer
 		err = json.Unmarshal(body, &container)
