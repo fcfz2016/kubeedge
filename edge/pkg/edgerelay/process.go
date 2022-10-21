@@ -441,7 +441,7 @@ func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer
 	contentType := "application/json;charset=utf-8"
 
 	b, err := json.Marshal(container)
-	klog.Infof("client string %v", b)
+	klog.Infof("client string %v", string(b))
 	if err != nil {
 		fmt.Println("json format error:", err)
 	}
