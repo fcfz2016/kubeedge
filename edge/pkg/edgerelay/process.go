@@ -18,6 +18,7 @@ import (
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager/dao"
 	v1 "github.com/kubeedge/kubeedge/pkg/apis/relays/v1"
 	"github.com/kubeedge/viaduct/pkg/mux"
+	"io"
 	"io/ioutil"
 	"k8s.io/klog/v2"
 	"net/http"
@@ -397,7 +398,9 @@ func (er *EdgeRelay) server() {
 func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Request) {
 	klog.Infof("edgerelay receive from server")
 	if request.Method == constants.POST {
-		body, err := ioutil.ReadAll(request.Body)
+		aReaderCloser := http.MaxBytesReader(writer, request.Body, 12*(1<<20))
+		body, err := io.ReadAll(aReaderCloser)
+		//body, err := ioutil.ReadAll(request.Body)
 
 		if err != nil {
 			fmt.Println("Read failed:", err)
@@ -425,9 +428,12 @@ func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Re
 			}
 		}
 		// todo:同步或异步，返回200状态语句位置问题
-		writer.WriteHeader(http.StatusOK)
+		//writer.WriteHeader(http.StatusOK)
 		if _, err := writer.Write([]byte("receive successfully")); err != nil {
 			klog.Errorf("Relay write body error %v", err)
+		}
+		if f, ok := writer.(http.Flusher); ok {
+			f.Flush()
 		}
 
 		er.HandleMsgFromOtherEdge(&container)
