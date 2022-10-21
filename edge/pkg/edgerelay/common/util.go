@@ -1,11 +1,13 @@
 package common
 
 import (
+	"fmt"
 	"k8s.io/klog/v2"
 	"strings"
 )
 
 const (
+	ResourceNode              = "node"
 	ResourceTypeRelay         = "relayrcs"
 	ResourceSep               = "/"
 	ResourceNodeIDIndex       = 1
@@ -16,7 +18,11 @@ const (
 	RelayUpdateIDOperation   = "updateidrelay"
 	RelayUpdateDataOperation = "updatedatarelay"
 
-	GroupResource = "relay"
+	GroupResource          = "relay"
+	EdgeRelayModuleName    = "edgerelay"
+	DefaultNameSpace       = "default"
+	ResourceTypeRelayReply = "relayrcs"
+	RelayReplyOperation    = "relayreply"
 )
 
 func GetResourceType(resource string) string {
@@ -41,4 +47,17 @@ func IsFullResource(resource string) bool {
 		return false
 	}
 	return true
+}
+
+func BuildResource(nodeID, namespace, resourceType, resourceID string) (resource string, err error) {
+	if namespace == "" || resourceType == "" || nodeID == "" {
+		err = fmt.Errorf("required parameter are not set (node id, namespace or resource type)")
+		return
+	}
+
+	resource = fmt.Sprintf("%s%s%s%s%s%s%s", ResourceNode, ResourceSep, nodeID, ResourceSep, namespace, ResourceSep, resourceType)
+	if resourceID != "" {
+		resource += fmt.Sprintf("%s%s", ResourceSep, resourceID)
+	}
+	return
 }

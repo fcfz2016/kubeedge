@@ -265,6 +265,8 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 				}
 			}
 		}
+		klog.Infof("send relay_mark msg finished, and feedback to cloud")
+		er.replyToCloud()
 	} else {
 		// 中继节点情况下：1、接收cloud传来的relay信息
 		if config.Config.GetNodeID() == config.Config.GetRelayID() {
@@ -464,7 +466,7 @@ func Decode(msg *model.Message) ([]byte, error) {
 	}
 	decodeBytes, err := base64.StdEncoding.DecodeString(v)
 	if err != nil {
-		return nil, fmt.Errorf("encode failed")
+		return nil, fmt.Errorf("decode failed")
 	}
 
 	return decodeBytes, nil
@@ -473,4 +475,18 @@ func Decode(msg *model.Message) ([]byte, error) {
 func Encode(msg *model.Message) {
 	encodeString := base64.StdEncoding.EncodeToString(msg.GetContent().([]byte))
 	msg.Content = encodeString
+}
+
+func (er *EdgeRelay) replyToCloud() {
+	msg := model.NewMessage("")
+
+	resource, err := common.BuildResource(config.Config.GetNodeID(), common.DefaultNameSpace, common.ResourceTypeRelayReply, "")
+	if err != nil {
+		klog.Warningf("replytocloud built message resource failed with error: %s", err)
+		return
+	}
+	msg = msg.BuildRouter(common.EdgeRelayModuleName, common.GroupResource, resource, common.RelayReplyOperation)
+	msg.Content = "OK"
+
+	er.MsgToEdgeHub(msg)
 }

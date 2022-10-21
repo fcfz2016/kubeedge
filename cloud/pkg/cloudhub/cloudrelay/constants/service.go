@@ -10,4 +10,6 @@ const (
 	DefaultNameSpace     = "default"
 	RelayID              = "relayID"
 	RelayGroupName       = "relay"
+
+	RelayReplyOperation = "relayreply"
 )

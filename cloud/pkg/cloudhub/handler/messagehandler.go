@@ -123,8 +123,13 @@ func (mh *MessageHandle) HandleServer(container *mux.MessageContainer, writer mu
 		return
 	}
 
+	if container.Message.GetOperation() == relayconstants.RelayReplyOperation {
+		klog.Infof("RelayReply message received from node:%s, status is:%v", nodeID, container.Message.GetContent())
+		return
+	}
+
 	if container.Message.GetOperation() == relayconstants.OpUploadRelayMessage && cloudrelay.RelayHandle.GetStatus() {
-		klog.V(4).Infof("Relay message received from node: %s", nodeID)
+		klog.Infof("Relay message received from node: %s", nodeID)
 		//msg := container.Message
 		mh.RelayHandleServer(container)
 		return
