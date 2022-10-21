@@ -397,8 +397,8 @@ func (er *EdgeRelay) server() {
 func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Request) {
 	klog.Infof("edgerelay receive from server")
 	if request.Method == constants.POST {
-		aReaderCloser := http.MaxBytesReader(writer, request.Body, 12*(1<<20))
-		body, err := io.ReadAll(aReaderCloser)
+		// aReaderCloser := http.MaxBytesReader(writer, request.Body, 12*(1<<20))
+		body, err := io.ReadAll(request.Body)
 		//body, err := ioutil.ReadAll(request.Body)
 
 		if err != nil {
@@ -435,7 +435,7 @@ func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Re
 			f.Flush()
 		}
 
-		er.HandleMsgFromOtherEdge(&container)
+		go er.HandleMsgFromOtherEdge(&container)
 
 	}
 }
