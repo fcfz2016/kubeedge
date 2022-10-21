@@ -326,7 +326,7 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 		case common.RelayOpenOperation:
 			er.Save(status, relayID, relayData)
 			er.SetIsRelayNodeStatus()
-			er.ContinueEdgeHub()
+			// er.ContinueEdgeHub()
 			break
 		case common.RelayUpdateDataOperation:
 			er.SaveDate(relayData)
