@@ -147,17 +147,17 @@ func (eh *EdgeHub) routeToCloud() {
 		default:
 		}
 		message, err := beehiveContext.Receive(modules.EdgeHubModuleName)
-		// 如果是中继状态并且不是中继节点，就把信息转发给中继模块处理
-		//if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
-		//	beehiveContext.Send(modules.EdgeRelayModuleName, message)
-		//	return
-		//}
 		if err != nil {
 			klog.Errorf("failed to receive message from edge: %v", err)
 			time.Sleep(time.Second)
 			continue
 		}
 
+		// 如果是中继状态并且不是中继节点，就把信息转发给中继模块处理
+		//if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
+		//	beehiveContext.Send(modules.EdgeRelayModuleName, message)
+		//	return
+		//}
 		err = eh.tryThrottle(message.GetID())
 		if err != nil {
 			klog.Errorf("msgID: %s, client rate limiter returned an error: %v ", message.GetID(), err)

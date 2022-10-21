@@ -264,9 +264,10 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 					er.client(v, container)
 				}
 			}
+			klog.Infof("send relay_mark msg finished, and feedback to cloud")
+			er.replyToCloud()
 		}
-		klog.Infof("send relay_mark msg finished, and feedback to cloud")
-		er.replyToCloud()
+
 	} else {
 		// 中继节点情况下：1、接收cloud传来的relay信息
 		if config.Config.GetNodeID() == config.Config.GetRelayID() {
@@ -363,7 +364,10 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 }
 func (er *EdgeRelay) MsgToEdgeHub(msg *model.Message) {
 	// ch <- message
-	beehiveContext.Send(modules.EdgeHubModuleName, *msg)
+	_, err := beehiveContext.SendSync(modules.EdgeHubModuleName, *msg, 10*time.Second)
+	if err != nil {
+		klog.Errorf("send edgerelay msg to cloud failed,%v", err)
+	}
 }
 
 func (er *EdgeRelay) MsgToOtherModule(msg *model.Message) {
