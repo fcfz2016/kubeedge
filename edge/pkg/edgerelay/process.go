@@ -441,14 +441,14 @@ func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer
 	contentType := "application/json;charset=utf-8"
 
 	b, err := json.Marshal(container)
-
+	klog.Infof("client string %v", b)
 	if err != nil {
 		fmt.Println("json format error:", err)
 	}
 
 	body := bytes.NewBuffer(b)
 	response, err := http.Post(url, contentType, body)
-
+	klog.Infof("client test")
 	if err != nil {
 		// todo: 多于某值的节点未收到的处理措施，以及失败重试
 		klog.Errorf("Post failed:", err)
