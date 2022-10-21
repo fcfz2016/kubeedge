@@ -19,7 +19,6 @@ import (
 	v1 "github.com/kubeedge/kubeedge/pkg/apis/relays/v1"
 	"github.com/kubeedge/viaduct/pkg/mux"
 	"io"
-	"io/ioutil"
 	"k8s.io/klog/v2"
 	"net/http"
 	"strconv"
@@ -467,8 +466,18 @@ func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer
 	}
 	klog.Infof("relay r statuscode: %d", response.StatusCode)
 
-	repbody, err := ioutil.ReadAll(response.Body)
-	defer response.Body.Close()
+	repbody, err := io.ReadAll(response.Body)
+	if err != nil {
+		klog.Errorf("repbody error:%v", err)
+	}
+
+	defer func() {
+		err := response.Body.Close()
+		if err != nil {
+			klog.Errorf("Body close err: %v", err)
+		}
+	}()
+
 	klog.Infof("relay r body: %s", repbody)
 	if response.StatusCode != http.StatusOK {
 		klog.Errorf("client failed")
