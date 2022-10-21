@@ -258,10 +258,12 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 			}
 			container.Header.Add("relay_mark", common.ResourceTypeRelay)
 			nodeMap := er.GetAllAddress()
+			klog.Infof("nodeMap.length", len(nodeMap))
 			for k, v := range nodeMap {
 				// 给非本节点传递信息
 				if k != config.Config.GetNodeID() {
 					er.client(v, container)
+					klog.Infof("relay %v send to non-relay node:%v", config.Config.GetNodeID(), k)
 				}
 			}
 			klog.Infof("send relay_mark msg finished, and feedback to cloud")
