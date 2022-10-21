@@ -402,7 +402,9 @@ func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Re
 		if err != nil {
 			fmt.Println("Read failed:", err)
 			writer.WriteHeader(http.StatusBadRequest)
-			writer.Write([]byte("fail to receive"))
+			if _, err := writer.Write([]byte("fail to receive")); err != nil {
+				klog.Errorf("Relay write body error %v", err)
+			}
 		}
 
 		defer request.Body.Close()
@@ -413,12 +415,15 @@ func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Re
 		if err != nil {
 			fmt.Println("json format error:", err)
 			writer.WriteHeader(http.StatusInternalServerError)
-			writer.Write([]byte("fail to unmarshal body, please check your message"))
+			if _, err := writer.Write([]byte("fail to unmarshal body, please check your message")); err != nil {
+				klog.Errorf("Relay write body error %v", err)
+			}
 		}
-		klog.Infof("edgerelay server msg to handle")
 		// todo:同步或异步，返回200状态语句位置问题
 		writer.WriteHeader(http.StatusOK)
-		writer.Write([]byte("receive successfully"))
+		if _, err := writer.Write([]byte("receive successfully")); err != nil {
+			klog.Errorf("Relay write body error %v", err)
+		}
 
 		er.HandleMsgFromOtherEdge(&container)
 
