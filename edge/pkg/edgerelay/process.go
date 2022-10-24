@@ -64,13 +64,17 @@ func (er *EdgeRelay) UnMarshalMsg(msg *model.Message) (bool, string, v1.RelayDat
 
 func (er *EdgeRelay) UnmarshalForForward(msg *model.Message) (*model.Message, error) {
 	var rmsg model.Message
-	decodeBytes, err := Decode(msg)
+	//decodeBytes, err := Decode(msg)
+	//if err != nil {
+	//	klog.Infof("UnmarshalForForward:%v", err)
+	//	return msg, err
+	//}
+	//klog.Infof("UnmarshalForForward encode %v", decodeBytes)
+	content, err := msg.GetContentData()
 	if err != nil {
-		klog.Infof("UnmarshalForForward:%v", err)
 		return msg, err
 	}
-	klog.Infof("UnmarshalForForward encode %v", decodeBytes)
-	err = json.Unmarshal(decodeBytes, &rmsg)
+	err = json.Unmarshal(content, &rmsg)
 	if err != nil {
 		klog.Infof("UnmarshalForForward:%v", err)
 		return msg, err
@@ -190,7 +194,7 @@ func (er *EdgeRelay) LoadData() {
 		klog.Errorf("unmarshal relay data to json failed")
 	}
 	config.Config.SetData(data)
-	klog.Errorf("load relaydata", data.AddrData)
+	klog.Errorf("load relaydata", len(data.AddrData))
 }
 
 func (er *EdgeRelay) MsgFromEdgeHub() {
@@ -252,29 +256,27 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 			}
 			break
 		}
-		er.Load()
 
 		// 给其他节点下发中继信息
-		//klog.Infof("send relay_mark msg to non-relay node1")
-		//if config.Config.GetNodeID() == config.Config.GetRelayID() {
-		//	klog.Infof("send relay_mark msg to non-relay node2")
-		//	container := &mux.MessageContainer{
-		//		Header:  map[string][]string{},
-		//		Message: msg,
-		//	}
-		//	container.Header.Add("relay_mark", common.ResourceTypeRelay)
-		//	nodeMap := er.GetAllAddress()
-		//	klog.Infof("nodeMap.length", len(nodeMap))
-		//	for k, v := range nodeMap {
-		//		// 给非本节点传递信息
-		//		if k != config.Config.GetNodeID() {
-		//			er.client(v, container)
-		//			klog.Infof("relay %v send to non-relay node:%v", config.Config.GetNodeID(), k)
-		//		}
-		//	}
-		//	klog.Infof("send relay_mark msg finished, and feedback to cloud")
-		//	er.replyToCloud()
-		//}
+		klog.Infof("send relay_mark msg to non-relay node")
+		if config.Config.GetNodeID() == config.Config.GetRelayID() {
+			container := &mux.MessageContainer{
+				Header:  map[string][]string{},
+				Message: msg,
+			}
+			container.Header.Add("relay_mark", common.ResourceTypeRelay)
+			nodeMap := er.GetAllAddress()
+
+			for k, v := range nodeMap {
+				// 给非本节点传递信息
+				if k != config.Config.GetNodeID() {
+					er.client(v, container)
+					klog.Infof("relay %v send to non-relay node:%v", config.Config.GetNodeID(), k)
+				}
+			}
+			klog.Infof("send relay_mark msg finished, and feedback to cloud")
+			er.replyToCloud()
+		}
 
 	} else {
 		// 中继节点情况下：1、接收cloud传来的relay信息
@@ -291,7 +293,6 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 			nodeID := common.GetNodeID(msgFromConent.GetResource())
 
 			trimMessage(msgFromConent)
-			Encode(msgFromConent)
 
 			nodeAddr := er.GetAddress(nodeID)
 			er.client(nodeAddr, container)
@@ -326,7 +327,7 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 		switch msg.Router.Operation {
 		case common.RelayCloseOperation:
 			er.SaveRelayStatus(false)
-			er.ContinueEdgeHub()
+			// er.ContinueEdgeHub()
 			break
 		case common.RelayOpenOperation:
 			er.Save(status, relayID, relayData)
