@@ -49,7 +49,7 @@ func (er *EdgeRelay) UnMarshalMsg(msg *model.Message) (bool, string, v1.RelayDat
 	//}
 	//klog.Infof("edgerelay encode %v", decodeBytes)
 	// err = json.Unmarshal(decodeBytes, &relayrc)
-	err := json.Unmarshal([]byte(msg.Content.(string)), &relayrc)
+	err := json.Unmarshal(msg.Content.([]byte), &relayrc)
 	if err != nil {
 		klog.Infof("RelayHandleServer:%v", err)
 		return false, "", v1.RelayData{}, err
