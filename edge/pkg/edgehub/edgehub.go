@@ -98,7 +98,7 @@ func (eh *EdgeHub) Start() {
 
 		klog.Infof("node relayconfig status", relayConfig.Config.GetStatus())
 		klog.Infof("node isrelaynode", relayConfig.Config.GetIsRelayNode())
-		
+
 		if !relayConfig.Config.GetStatus() || (relayConfig.Config.GetStatus() && relayConfig.Config.GetIsRelayNode()) {
 			klog.Infof("node open chClient")
 			err = eh.chClient.Init()

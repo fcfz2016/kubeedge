@@ -119,9 +119,9 @@ func (er *EdgeRelay) SaveRelayStatus(relayStatus bool) {
 }
 
 func (er *EdgeRelay) SaveRelayID(relayID string) {
-	er.SetIsRelayNodeStatus()
 	// 更新config和数据库
 	config.Config.SetRelayID(relayID)
+	er.SetIsRelayNodeStatus()
 	// 判断数据库中能不能查到，不能查到就insert，能查到就update
 	meta := &dao.Meta{
 		Key:   constants.RelayID,
@@ -261,7 +261,6 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 			oldIsRelayNode := config.Config.GetIsRelayNode()
 
 			er.SaveRelayID(relayID)
-			er.SetIsRelayNodeStatus()
 
 			if oldIsRelayNode != config.Config.GetIsRelayNode() {
 				er.SwitchEdgeHubMode(oldStatus, oldIsRelayNode)
@@ -356,7 +355,6 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 			oldIsRelayNode := config.Config.GetIsRelayNode()
 
 			er.SaveRelayID(relayID)
-			er.SetIsRelayNodeStatus()
 
 			if oldIsRelayNode != config.Config.GetIsRelayNode() {
 				er.SwitchEdgeHubMode(oldStatus, oldIsRelayNode)
