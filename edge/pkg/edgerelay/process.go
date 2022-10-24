@@ -218,7 +218,6 @@ func (er *EdgeRelay) MsgFromEdgeHub() {
 		}
 		klog.Infof("MsgFromEdgeHub end")
 	}
-	klog.Infof("MsgFromEdgeHub last end")
 }
 
 // HandleMsgFromEdgeHub
@@ -253,6 +252,7 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 			}
 			break
 		}
+		er.Load()
 
 		// 给其他节点下发中继信息
 		//klog.Infof("send relay_mark msg to non-relay node1")
