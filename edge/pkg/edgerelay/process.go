@@ -91,7 +91,7 @@ func (er *EdgeRelay) LoadRelayStatus() {
 	} else {
 		config.Config.SetStatus(false)
 	}
-	klog.Infof("load relayStatus", result[0])
+	klog.Infof("load relayStatus", config.Config.GetStatus())
 }
 func (er *EdgeRelay) SaveRelayStatus(relayStatus bool) {
 	klog.Errorf("save relayStatus")
@@ -190,7 +190,7 @@ func (er *EdgeRelay) LoadData() {
 		klog.Errorf("unmarshal relay data to json failed")
 	}
 	config.Config.SetData(data)
-	klog.Errorf("load relaydata", len(data.AddrData))
+	klog.Errorf("load relaydata", data.AddrData)
 }
 
 func (er *EdgeRelay) MsgFromEdgeHub() {
