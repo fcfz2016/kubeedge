@@ -95,6 +95,7 @@ func (eh *EdgeHub) Start() {
 		//	time.Sleep(waitTime)
 		//	continue
 		//}
+
 		if !relayConfig.Config.GetStatus() || (relayConfig.Config.GetStatus() && relayConfig.Config.GetIsRelayNode()) {
 			klog.Infof("node open chClient")
 			err = eh.chClient.Init()
@@ -123,7 +124,7 @@ func (eh *EdgeHub) Start() {
 		// 如果开关处于开启阶段且本节点非中继节点，则越过正常连接阶段
 		if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
 			klog.Warningf("non-relay node wait for switching")
-			
+
 			<-relay.HubRelayChan.IsClose
 			eh.pubConnectInfo(false)
 
