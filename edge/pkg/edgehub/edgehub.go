@@ -14,6 +14,7 @@ import (
 	"github.com/kubeedge/kubeedge/edge/pkg/edgehub/certificate"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgehub/clients"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgehub/config"
+	relayConfig "github.com/kubeedge/kubeedge/edge/pkg/edgerelay/config"
 	"github.com/kubeedge/kubeedge/pkg/apis/componentconfig/edgecore/v1alpha1"
 )
 
@@ -88,56 +89,57 @@ func (eh *EdgeHub) Start() {
 
 		waitTime := time.Duration(config.Config.Heartbeat) * time.Second * 2
 
-		err = eh.chClient.Init()
-		if err != nil {
-			klog.Errorf("connection failed: %v, will reconnect after %s", err, waitTime.String())
-			time.Sleep(waitTime)
-			continue
-		}
-		//if !relayConfig.Config.GetStatus() || (relayConfig.Config.GetStatus() && relayConfig.Config.GetIsRelayNode()) {
-		//	klog.Infof("node open chClient")
-		//	err = eh.chClient.Init()
-		//	if err != nil {
-		//		klog.Errorf("connection failed: %v, will reconnect after %s", err, waitTime.String())
-		//		time.Sleep(waitTime)
-		//		continue
-		//	}
-		//} else {
-		//	klog.Infof("non-relay no connection")
+		//err = eh.chClient.Init()
+		//if err != nil {
+		//	klog.Errorf("connection failed: %v, will reconnect after %s", err, waitTime.String())
+		//	time.Sleep(waitTime)
+		//	continue
 		//}
+		if !relayConfig.Config.GetStatus() || (relayConfig.Config.GetStatus() && relayConfig.Config.GetIsRelayNode()) {
+			klog.Infof("node open chClient")
+			err = eh.chClient.Init()
+			if err != nil {
+				klog.Errorf("connection failed: %v, will reconnect after %s", err, waitTime.String())
+				time.Sleep(waitTime)
+				continue
+			}
+		} else {
+			klog.Infof("non-relay no connection")
+		}
 
 		// execute hook func after connect
-		//eh.pubConnectInfo(true)
-		//if !relayConfig.Config.GetStatus() || (relayConfig.Config.GetStatus() && relayConfig.Config.GetIsRelayNode()) {
-		//	klog.Infof("node open begin routeToEdge")
-		//	go eh.routeToEdge()
-		//} else {
-		//	klog.Infof("non-relay close routeToEdge")
-		//}
-		go eh.routeToEdge()
+		eh.pubConnectInfo(true)
+		go eh.switchRelayMode()
+		if !relayConfig.Config.GetStatus() || (relayConfig.Config.GetStatus() && relayConfig.Config.GetIsRelayNode()) {
+			klog.Infof("node open begin routeToEdge")
+			go eh.routeToEdge()
+		} else {
+			klog.Infof("non-relay close routeToEdge")
+		}
+		// go eh.routeToEdge()
 		go eh.routeToCloud()
 		go eh.keepalive()
 
 		// 如果开关处于开启阶段且本节点非中继节点，则越过正常连接阶段
-		//select {
-		//case <-relay.HubRelayChan.IsClose:
-		//	klog.Warningf("edgehub relaystatus changes")
-		//	time.Sleep(waitTime)
-		//cleanChan:
-		//	for {
-		//		select {
-		//		case <-relay.HubRelayChan.IsClose:
-		//		default:
-		//			break cleanChan
-		//		}
-		//	}
-		//
-		//	continue // 跳出循环
-		//default:
-		//}
-		//if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
-		//
-		//}
+		if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
+			klog.Warningf("non-relay node wait for switching")
+			
+			<-relay.HubRelayChan.IsClose
+			eh.pubConnectInfo(false)
+
+			klog.Warningf("non-relay node mode switches")
+			time.Sleep(waitTime)
+		cleanChan:
+			for {
+				select {
+				case <-relay.HubRelayChan.IsClose:
+				default:
+					break cleanChan
+				}
+			}
+
+			continue // 跳出循环
+		}
 
 		// wait the stop signal
 		// stop authinfo manager/websocket connection

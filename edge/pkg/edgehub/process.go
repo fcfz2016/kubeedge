@@ -3,6 +3,7 @@ package edgehub
 import (
 	"context"
 	"fmt"
+	"github.com/kubeedge/kubeedge/edge/pkg/edgehub/relay"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -241,4 +242,16 @@ func (eh *EdgeHub) tryThrottle(msgID string) error {
 	}
 
 	return nil
+}
+
+func (eh *EdgeHub) switchRelayMode() {
+	for {
+		select {
+		case <-relay.HubRelayChan.IsSwitch:
+			klog.Infof("first nodes switch or relaynode switch")
+			eh.reconnectChan <- struct{}{}
+			return
+		default:
+		}
+	}
 }

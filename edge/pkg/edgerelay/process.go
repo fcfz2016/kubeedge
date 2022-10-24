@@ -156,8 +156,16 @@ func (er *EdgeRelay) SetIsRelayNodeStatus() {
 		config.Config.SetIsRelayNode(false)
 	}
 }
-func (er *EdgeRelay) ContinueEdgeHub() {
-	relay.HubRelayChan.IsClose <- struct{}{}
+
+func (er *EdgeRelay) SwitchEdgeHubMode(oldStatus bool, oldIsRelayNode bool) {
+	if oldStatus && !oldIsRelayNode {
+		relay.HubRelayChan.IsClose <- struct{}{}
+	} else {
+		relay.HubRelayChan.IsSwitch <- struct{}{}
+	}
+}
+func (er *EdgeRelay) FirstSwitch() {
+	relay.HubRelayChan.IsSwitch <- struct{}{}
 }
 
 func (er *EdgeRelay) SaveDate(data v1.RelayData) {
@@ -235,24 +243,29 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 		}
 		switch msg.Router.Operation {
 		case common.RelayCloseOperation:
+			oldStatus := config.Config.GetStatus()
+			oldIsRelayNode := config.Config.GetIsRelayNode()
+
 			er.SaveRelayStatus(false)
-			er.ContinueEdgeHub()
+			er.SwitchEdgeHubMode(oldStatus, oldIsRelayNode)
+
 			break
 		case common.RelayOpenOperation:
 			er.Save(status, relayID, relayData)
-			er.SetIsRelayNodeStatus()
-			// er.ContinueEdgeHub()
+			er.FirstSwitch()
 			break
 		case common.RelayUpdateDataOperation:
 			er.SaveDate(relayData)
 			break
 		case common.RelayUpdateIDOperation:
-			er.SaveRelayID(relayID)
-
+			oldStatus := config.Config.GetStatus()
 			oldIsRelayNode := config.Config.GetIsRelayNode()
+
+			er.SaveRelayID(relayID)
 			er.SetIsRelayNodeStatus()
+
 			if oldIsRelayNode != config.Config.GetIsRelayNode() {
-				er.ContinueEdgeHub()
+				er.SwitchEdgeHubMode(oldStatus, oldIsRelayNode)
 			}
 			break
 		}
@@ -326,24 +339,28 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 		}
 		switch msg.Router.Operation {
 		case common.RelayCloseOperation:
+			oldStatus := config.Config.GetStatus()
+			oldIsRelayNode := config.Config.GetIsRelayNode()
+
 			er.SaveRelayStatus(false)
-			// er.ContinueEdgeHub()
+			er.SwitchEdgeHubMode(oldStatus, oldIsRelayNode)
 			break
 		case common.RelayOpenOperation:
 			er.Save(status, relayID, relayData)
-			er.SetIsRelayNodeStatus()
-			// er.ContinueEdgeHub()
+			er.FirstSwitch()
 			break
 		case common.RelayUpdateDataOperation:
 			er.SaveDate(relayData)
 			break
 		case common.RelayUpdateIDOperation:
-			er.SaveRelayID(relayID)
-
+			oldStatus := config.Config.GetStatus()
 			oldIsRelayNode := config.Config.GetIsRelayNode()
+
+			er.SaveRelayID(relayID)
 			er.SetIsRelayNodeStatus()
+
 			if oldIsRelayNode != config.Config.GetIsRelayNode() {
-				er.ContinueEdgeHub()
+				er.SwitchEdgeHubMode(oldStatus, oldIsRelayNode)
 			}
 			break
 		}
