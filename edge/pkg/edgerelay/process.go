@@ -150,7 +150,6 @@ func (er *EdgeRelay) LoadRelayID() {
 // 之后用于控制edgehub是否可以直连，在判断直连时，必须满足！isrelaynode&&relaystatus才确定为不直连
 func (er *EdgeRelay) SetIsRelayNodeStatus() {
 	if config.Config.GetRelayID() == config.Config.GetNodeID() {
-		// 打开通道
 		config.Config.SetIsRelayNode(true)
 	} else {
 		config.Config.SetIsRelayNode(false)
