@@ -95,6 +95,7 @@ func (eh *EdgeHub) Start() {
 			continue
 		}
 		//if !relayConfig.Config.GetStatus() || (relayConfig.Config.GetStatus() && relayConfig.Config.GetIsRelayNode()) {
+		//	klog.Infof("node open chClient")
 		//	err = eh.chClient.Init()
 		//	if err != nil {
 		//		klog.Errorf("connection failed: %v, will reconnect after %s", err, waitTime.String())
@@ -102,24 +103,26 @@ func (eh *EdgeHub) Start() {
 		//		continue
 		//	}
 		//} else {
-		//	klog.Errorf("non-relay no connection")
+		//	klog.Infof("non-relay no connection")
 		//}
 
 		// execute hook func after connect
-		eh.pubConnectInfo(true)
+		//eh.pubConnectInfo(true)
 		//if !relayConfig.Config.GetStatus() || (relayConfig.Config.GetStatus() && relayConfig.Config.GetIsRelayNode()) {
+		//	klog.Infof("node open begin routeToEdge")
 		//	go eh.routeToEdge()
+		//} else {
+		//	klog.Infof("non-relay close routeToEdge")
 		//}
 		go eh.routeToEdge()
 		go eh.routeToCloud()
 		go eh.keepalive()
 
 		// 如果开关处于开启阶段且本节点非中继节点，则越过正常连接阶段
-		//if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
-		//	<-relay.HubRelayChan.IsClose
+		//select {
+		//case <-relay.HubRelayChan.IsClose:
 		//	klog.Warningf("edgehub relaystatus changes")
 		//	time.Sleep(waitTime)
-		//
 		//cleanChan:
 		//	for {
 		//		select {
@@ -130,6 +133,10 @@ func (eh *EdgeHub) Start() {
 		//	}
 		//
 		//	continue // 跳出循环
+		//default:
+		//}
+		//if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
+		//
 		//}
 
 		// wait the stop signal

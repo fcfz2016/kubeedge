@@ -521,12 +521,3 @@ func GetMessageDeletionTimestamp(msg *beehiveModel.Message) (*metav1.Time, error
 
 	return accessor.GetDeletionTimestamp(), nil
 }
-
-//func GetRMessageDeletionTimestamp(msg *beehiveModel.Message) (*metav1.Time, error) {
-//	accessor, err := meta.Accessor(msg.Content)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return accessor.GetDeletionTimestamp(), nil
-//}

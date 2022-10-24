@@ -1,7 +1,6 @@
 package relaycontroller
 
 import (
-	"encoding/json"
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	"github.com/kubeedge/beehive/pkg/core/model"
 	"github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/cloudrelay"
@@ -178,13 +177,15 @@ func buildControllerMessage(nodeID, namespace, opr string, relayrc *v1.Relayrc) 
 	}
 
 	msg = msg.BuildRouter(modules.RelayControllerModuleName, GroupResource, resource, opr)
-	contentMsg, err := json.Marshal(relayrc.Spec)
+	//contentMsg, err := json.Marshal(relayrc.Spec)
+
 	if err != nil {
 		klog.V(4).Infof("RelayHandleServer Umarshal failed", err)
 	}
 
-	msg.Content = contentMsg
+	//msg.Content = contentMsg
 
+	msg.Content = relayrc.Spec
 	klog.Warningf("relaycontroller send msg", msg.Router.Operation)
 	return msg
 }

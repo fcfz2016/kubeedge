@@ -42,13 +42,14 @@ func (er *EdgeRelay) Save(status bool, relayID string, relayData v1.RelayData) {
 
 func (er *EdgeRelay) UnMarshalMsg(msg *model.Message) (bool, string, v1.RelayData, error) {
 	var relayrc v1.RelayrcSpec
-	decodeBytes, err := Decode(msg)
-	if err != nil {
-		klog.Infof("RelayHandleServer:%v", err)
-		return false, "", v1.RelayData{}, err
-	}
-	klog.Infof("edgerelay encode %v", decodeBytes)
-	err = json.Unmarshal(decodeBytes, &relayrc)
+	// decodeBytes, err := Decode(msg)
+	//if err != nil {
+	//	klog.Infof("RelayHandleServer:%v", err)
+	//	return false, "", v1.RelayData{}, err
+	//}
+	//klog.Infof("edgerelay encode %v", decodeBytes)
+	// err = json.Unmarshal(decodeBytes, &relayrc)
+	err := json.Unmarshal([]byte(msg.Content.(string)), &relayrc)
 	if err != nil {
 		klog.Infof("RelayHandleServer:%v", err)
 		return false, "", v1.RelayData{}, err
@@ -250,26 +251,26 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 		}
 
 		// 给其他节点下发中继信息
-		klog.Infof("send relay_mark msg to non-relay node1")
-		if config.Config.GetNodeID() == config.Config.GetRelayID() {
-			klog.Infof("send relay_mark msg to non-relay node2")
-			container := &mux.MessageContainer{
-				Header:  map[string][]string{},
-				Message: msg,
-			}
-			container.Header.Add("relay_mark", common.ResourceTypeRelay)
-			nodeMap := er.GetAllAddress()
-			klog.Infof("nodeMap.length", len(nodeMap))
-			for k, v := range nodeMap {
-				// 给非本节点传递信息
-				if k != config.Config.GetNodeID() {
-					er.client(v, container)
-					klog.Infof("relay %v send to non-relay node:%v", config.Config.GetNodeID(), k)
-				}
-			}
-			klog.Infof("send relay_mark msg finished, and feedback to cloud")
-			er.replyToCloud()
-		}
+		//klog.Infof("send relay_mark msg to non-relay node1")
+		//if config.Config.GetNodeID() == config.Config.GetRelayID() {
+		//	klog.Infof("send relay_mark msg to non-relay node2")
+		//	container := &mux.MessageContainer{
+		//		Header:  map[string][]string{},
+		//		Message: msg,
+		//	}
+		//	container.Header.Add("relay_mark", common.ResourceTypeRelay)
+		//	nodeMap := er.GetAllAddress()
+		//	klog.Infof("nodeMap.length", len(nodeMap))
+		//	for k, v := range nodeMap {
+		//		// 给非本节点传递信息
+		//		if k != config.Config.GetNodeID() {
+		//			er.client(v, container)
+		//			klog.Infof("relay %v send to non-relay node:%v", config.Config.GetNodeID(), k)
+		//		}
+		//	}
+		//	klog.Infof("send relay_mark msg finished, and feedback to cloud")
+		//	er.replyToCloud()
+		//}
 
 	} else {
 		// 中继节点情况下：1、接收cloud传来的relay信息
