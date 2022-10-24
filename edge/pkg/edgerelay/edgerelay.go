@@ -44,7 +44,6 @@ func (er *EdgeRelay) Start() {
 	// 首先读取qlite里的信息，放到内存中（更新config）
 	// er.Load()
 
-	// 不需要开协程 er.MsgFromOtherEdge()
+	go er.server()
 	go er.MsgFromEdgeHub()
-	er.server()
 }
