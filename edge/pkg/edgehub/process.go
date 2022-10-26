@@ -155,8 +155,11 @@ func (eh *EdgeHub) routeToCloud() {
 			continue
 		}
 
+		klog.Errorf("test routeToCloud with relaystatus before relaymode: %v", relayConfig.Config.GetStatus(), relayConfig.Config.GetIsRelayNode())
+
 		// 如果是中继状态并且不是中继节点，就把信息转发给中继模块处理
 		if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
+			klog.Errorf("test routeToCloud with relaystatus in relaymode: %v", relayConfig.Config.GetStatus(), relayConfig.Config.GetIsRelayNode())
 			beehiveContext.Send(modules.EdgeRelayModuleName, message)
 			return
 		}
@@ -165,7 +168,7 @@ func (eh *EdgeHub) routeToCloud() {
 			klog.Errorf("msgID: %s, client rate limiter returned an error: %v ", message.GetID(), err)
 			continue
 		}
-
+		klog.Errorf("test routeToCloud with relaystatus after relaymode: %v", relayConfig.Config.GetStatus(), relayConfig.Config.GetIsRelayNode())
 		// post message to cloud hub
 		err = eh.sendToCloud(message)
 		if err != nil {
@@ -188,11 +191,14 @@ func (eh *EdgeHub) keepalive() {
 			BuildRouter(modules.EdgeHubModuleName, "resource", "node", messagepkg.OperationKeepalive).
 			FillBody("ping")
 
+		klog.Infof("test keepalive with relaystatus before relaymode: %v", relayConfig.Config.GetStatus(), relayConfig.Config.GetIsRelayNode())
 		if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
+			klog.Infof("test keepalive with relaystatus in relaymode: %v", relayConfig.Config.GetStatus(), relayConfig.Config.GetIsRelayNode())
 			beehiveContext.Send(modules.EdgeRelayModuleName, *msg)
 			return
 		}
 		// post message to cloud hub
+		klog.Infof("test keepalive with relaystatus after relaymode: %v", relayConfig.Config.GetStatus(), relayConfig.Config.GetIsRelayNode())
 		err := eh.sendToCloud(*msg)
 		if err != nil {
 			klog.Errorf("websocket write error: %v", err)

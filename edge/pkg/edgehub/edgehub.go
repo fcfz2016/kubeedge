@@ -133,14 +133,14 @@ func (eh *EdgeHub) Start() {
 
 			klog.Warningf("non-relay node mode switches")
 			time.Sleep(waitTime)
-		cleanChan:
-			for {
-				select {
-				case <-relay.HubRelayChan.IsClose:
-				default:
-					break cleanChan
-				}
-			}
+			//cleanChan:
+			//	for {
+			//		select {
+			//		case <-relay.HubRelayChan.IsClose:
+			//		default:
+			//			break cleanChan
+			//		}
+			//	}
 
 			continue // 跳出循环
 		}
