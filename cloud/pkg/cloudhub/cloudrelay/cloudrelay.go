@@ -80,21 +80,28 @@ func (relayHandle *CloudRelay) SealMessage(msg *beehiveModel.Message) (string, *
 	relayMsg.Router.Resource = resource
 	relayMsg.Router.Group = constants.RelayGroupName
 
-	contentMsg, err := json.Marshal(msg)
+	//contentMsg, err := json.Marshal(msg)
 	if err != nil {
 		klog.V(4).Infof("RelayHandleServer Umarshal failed", err)
 	}
-	relayMsg.Content = contentMsg
+	relayMsg.Content = msg
 	return oldID, relayMsg, nil
 }
 
 func (relayHandle *CloudRelay) UnsealMessage(container *mux.MessageContainer) *mux.MessageContainer {
-	var rcontainer mux.MessageContainer
-	err := json.Unmarshal(container.Message.GetContent().([]byte), &rcontainer)
+	var rcontainer *mux.MessageContainer
+
+	content, err := container.Message.GetContentData()
 	if err != nil {
-		klog.V(4).Infof("RelayHandleServer Unmarshal failed", err)
+		return nil
 	}
-	return &rcontainer
+	err = json.Unmarshal(content, &rcontainer)
+	if err != nil {
+		klog.Infof("UnsealMessage Unmarshal failed:%v", err)
+		return nil
+	}
+
+	return rcontainer
 }
 
 func (relayHandle *CloudRelay) GetRelayId() string {

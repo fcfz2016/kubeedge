@@ -128,12 +128,12 @@ func (mh *MessageHandle) HandleServer(container *mux.MessageContainer, writer mu
 		return
 	}
 
-	if container.Message.GetOperation() == relayconstants.OpUploadRelayMessage && cloudrelay.RelayHandle.GetStatus() {
-		klog.Infof("Relay message received from node: %s", nodeID)
-		//msg := container.Message
-		mh.RelayHandleServer(container)
-		return
-	}
+	//if container.Message.GetOperation() == relayconstants.OpUploadRelayMessage && cloudrelay.RelayHandle.GetStatus() {
+	//	klog.Infof("Relay message received from node: %s", nodeID)
+	//	//msg := container.Message
+	//	mh.RelayHandleServer(container)
+	//	return
+	//}
 
 	klog.V(4).Infof("[cloudhub/HandlerServer] get msg from edge(%v): %+v", nodeID, container.Message)
 	if container.Message.GetOperation() == model.OpKeepalive {
@@ -345,8 +345,7 @@ func (mh *MessageHandle) PubToController(info *model.HubInfo, msg *beehiveModel.
 }
 
 func (mh *MessageHandle) hubIoWrite(hi hubio.CloudHubIO, nodeID string, msg *beehiveModel.Message) error {
-	klog.Infof("msg in hubIoWrite", msg.GetResource())
-	klog.Infof("msg in hubIoWrite", msg.GetContent())
+	klog.Infof("msg in hubIoWrite,%v", msg)
 	value, ok := mh.nodeLocks.Load(nodeID)
 	if !ok {
 		return fmt.Errorf("node disconnected")
@@ -483,7 +482,7 @@ func (mh *MessageHandle) ListMessageWriteLoop(info *model.HubInfo, stopServe cha
 		if !ok {
 			continue
 		}
-		klog.Infof("list send message begin (test for relay), v%", msg.GetContent())
+
 		if err := mh.send(conn.(hubio.CloudHubIO), info, msg); err != nil {
 			klog.Errorf("failed to send to cloudhub, err: %v", err)
 		}

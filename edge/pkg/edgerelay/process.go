@@ -2,7 +2,6 @@ package edgerelay
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
@@ -371,12 +370,12 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 			klog.Infof("get msg from non-relay node and send them to cloud")
 			msg = container.Message.Clone(container.Message)
 			msg.SetResourceOperation(msg.GetResource(), constants.OpUploadRelayMessage)
-			contentMsg, err := json.Marshal(*msg)
+			//contentMsg, err := json.Marshal(*msg)
 
-			if err != nil {
-				fmt.Errorf("EdgeRelay SealMessage failed")
-			}
-			msg.Content = contentMsg
+			//if err != nil {
+			//	fmt.Errorf("EdgeRelay SealMessage failed")
+			//}
+			msg.Content = container
 			klog.Infof("HandleMsgFromOtherEdge,node is relaynode:%v", msg)
 			er.MsgToEdgeHub(msg)
 		} else {
@@ -504,7 +503,7 @@ func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer
 		klog.Errorf("client failed")
 		return
 	}
-	klog.Infof("Relay client end, status is:%v, body is:%v", response.StatusCode, repbody)
+	klog.Infof("Relay client end, status is:%v, body is:%v", response.StatusCode, string(repbody))
 }
 
 func (er *EdgeRelay) GetAddress(nodeID string) v1.NodeAddress {
@@ -528,24 +527,6 @@ func trimMessage(msg *model.Message) {
 			msg.SetResourceOperation(strings.Join(tokens[2:], "/"), msg.GetOperation())
 		}
 	}
-}
-
-func Decode(msg *model.Message) ([]byte, error) {
-	v, ok := msg.GetContent().(string)
-	if !ok {
-		return nil, fmt.Errorf("assert failed")
-	}
-	decodeBytes, err := base64.StdEncoding.DecodeString(v)
-	if err != nil {
-		return nil, fmt.Errorf("decode failed")
-	}
-
-	return decodeBytes, nil
-}
-
-func Encode(msg *model.Message) {
-	encodeString := base64.StdEncoding.EncodeToString(msg.GetContent().([]byte))
-	msg.Content = encodeString
 }
 
 func (er *EdgeRelay) replyToCloud() {
