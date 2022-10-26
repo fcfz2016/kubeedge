@@ -378,6 +378,7 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 			msg.Content = container
 			klog.Infof("HandleMsgFromOtherEdge,node is relaynode:%v", msg)
 			er.MsgToEdgeHub(msg)
+			
 		} else {
 			klog.Infof("get msg from relay node and send them correct module")
 			// 本节点非中继节点，ToOtherModule
