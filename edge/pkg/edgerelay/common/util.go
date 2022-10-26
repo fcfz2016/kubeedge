@@ -29,6 +29,7 @@ func GetResourceType(resource string) string {
 	sli := strings.Split(resource, ResourceSep)
 	if len(sli) <= ResourceNodeIDIndex {
 		klog.Errorf("no relayID")
+		return ""
 	}
 	return sli[ResourceResourceTypeIndex]
 }
@@ -37,6 +38,7 @@ func GetNodeID(resource string) string {
 	sli := strings.Split(resource, ResourceSep)
 	if len(sli) <= ResourceNodeIDIndex {
 		klog.Errorf("no relayID")
+		return ""
 	}
 	return sli[ResourceNodeIDIndex]
 }
