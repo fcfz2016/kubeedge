@@ -220,13 +220,9 @@ func (er *EdgeRelay) MsgFromEdgeHub() {
 			time.Sleep(time.Second)
 		}
 		// 调用HandleMsgFromEdgeHub
-		if common.IsFullResource(message.GetResource()) {
-			klog.Infof("edgerelay receive message from edgehub: %v", message.GetResource())
-			klog.Infof("edgerelay receive message from edgehub: %v", message.GetContent())
-			er.HandleMsgFromEdgeHub(&message)
-		} else {
-			klog.Errorf("edgerelay received message from edgehub is incomplete: %v", message.GetResource())
-		}
+		klog.Infof("edgerelay receive message from edgehub: %v", message)
+		er.HandleMsgFromEdgeHub(&message)
+
 		klog.Infof("MsgFromEdgeHub end")
 	}
 }
@@ -376,10 +372,12 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 				fmt.Errorf("EdgeRelay SealMessage failed")
 			}
 			msg.Content = contentMsg
+			klog.Infof("HandleMsgFromOtherEdge,node is relaynode:%v", msg)
 			er.MsgToEdgeHub(msg)
 		} else {
 			// 本节点非中继节点，ToOtherModule
 			msg = container.Message
+			klog.Infof("HandleMsgFromOtherEdge,node is non-relaynode:%v", msg)
 			er.MsgToOtherModule(msg)
 		}
 	}
