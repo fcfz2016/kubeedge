@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgehub/relay"
+	relayConfig "github.com/kubeedge/kubeedge/edge/pkg/edgerelay/config"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -155,10 +156,10 @@ func (eh *EdgeHub) routeToCloud() {
 		}
 
 		// 如果是中继状态并且不是中继节点，就把信息转发给中继模块处理
-		//if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
-		//	beehiveContext.Send(modules.EdgeRelayModuleName, message)
-		//	return
-		//}
+		if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
+			beehiveContext.Send(modules.EdgeRelayModuleName, message)
+			return
+		}
 		err = eh.tryThrottle(message.GetID())
 		if err != nil {
 			klog.Errorf("msgID: %s, client rate limiter returned an error: %v ", message.GetID(), err)
@@ -187,10 +188,10 @@ func (eh *EdgeHub) keepalive() {
 			BuildRouter(modules.EdgeHubModuleName, "resource", "node", messagepkg.OperationKeepalive).
 			FillBody("ping")
 
-		//if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
-		//	beehiveContext.Send(modules.EdgeRelayModuleName, *msg)
-		//	return
-		//}
+		if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
+			beehiveContext.Send(modules.EdgeRelayModuleName, *msg)
+			return
+		}
 		// post message to cloud hub
 		err := eh.sendToCloud(*msg)
 		if err != nil {
