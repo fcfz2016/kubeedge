@@ -128,12 +128,12 @@ func (mh *MessageHandle) HandleServer(container *mux.MessageContainer, writer mu
 		return
 	}
 
-	//if container.Message.GetOperation() == relayconstants.OpUploadRelayMessage && cloudrelay.RelayHandle.GetStatus() {
-	//	klog.Infof("Relay message received from node: %s", nodeID)
-	//	//msg := container.Message
-	//	mh.RelayHandleServer(container)
-	//	return
-	//}
+	if cloudrelay.RelayHandle.GetStatus() && container.Message.GetOperation() == relayconstants.OpUploadRelayMessage {
+		klog.Infof("Relay message received from node: %s", nodeID)
+		//msg := container.Message
+		mh.RelayHandleServer(container)
+		return
+	}
 
 	klog.V(4).Infof("[cloudhub/HandlerServer] get msg from edge(%v): %+v", nodeID, container.Message)
 	if container.Message.GetOperation() == model.OpKeepalive {
