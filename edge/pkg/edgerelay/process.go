@@ -231,6 +231,7 @@ func (er *EdgeRelay) MsgFromEdgeHub() {
 func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 	// 肯定是关于中继类型的信息，才会由EdgeHub发给Relay处理
 	// 查看是否为中继模块下发节点信息
+	klog.Infof("HandleMsgFromEdgeHub handle msg, %v", msg)
 	if common.GetResourceType(msg.GetResource()) == common.ResourceTypeRelay {
 		status, relayID, relayData, err := er.UnMarshalMsg(msg)
 		if err != nil {
@@ -288,6 +289,7 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 	} else {
 		// 中继节点情况下：1、接收cloud传来的relay信息
 		if config.Config.GetNodeID() == config.Config.GetRelayID() {
+			klog.Infof("send msg received from cloud to non-relay node")
 			msgFromConent, err := er.UnmarshalForForward(msg)
 			if err != nil {
 				klog.Errorf("edgerelay unmarshal msg from cloud to edge failed, %v", err)
@@ -306,6 +308,7 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 			// 非中继节点情况下：2、将需要转发给cloud的信息，或keepalive信息传给中继节点处理
 		} else {
 			// else 封层container格式，添加自身nodeID和projectID，目标nodeID标为relayID
+			klog.Infof("non-relay node send msg to relay node")
 			container := &mux.MessageContainer{
 				Header:  map[string][]string{},
 				Message: msg,
@@ -320,6 +323,7 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 }
 
 func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
+	klog.Infof("HandleMsgFromOtherEdge handle msg,%v", container)
 	relayMark := container.Header.Get("relay_mark")
 	var msg *model.Message
 	// 如果是节点标记信息
@@ -364,6 +368,7 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 
 		// 本节点是中继节点，负责把消息发给cloud端，ToCloud
 		if config.Config.GetNodeID() == config.Config.GetRelayID() {
+			klog.Infof("get msg from non-relay node and send them to cloud")
 			msg = container.Message.Clone(container.Message)
 			msg.SetResourceOperation(msg.GetResource(), constants.OpUploadRelayMessage)
 			contentMsg, err := json.Marshal(*msg)
@@ -375,6 +380,7 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 			klog.Infof("HandleMsgFromOtherEdge,node is relaynode:%v", msg)
 			er.MsgToEdgeHub(msg)
 		} else {
+			klog.Infof("get msg from relay node and send them correct module")
 			// 本节点非中继节点，ToOtherModule
 			msg = container.Message
 			klog.Infof("HandleMsgFromOtherEdge,node is non-relaynode:%v", msg)
@@ -459,7 +465,7 @@ func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Re
 
 // client
 func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer) {
-	klog.Infof("Relay client begin")
+	klog.Infof("Relay client begin,and msg is:%v", container)
 	ip := addr.IP
 	port := addr.Port
 
@@ -475,13 +481,12 @@ func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer
 
 	body := bytes.NewBuffer(b)
 	response, err := http.Post(url, contentType, body)
-	klog.Infof("client test")
+
 	if err != nil {
 		// todo: 多于某值的节点未收到的处理措施，以及失败重试
 		klog.Errorf("Post failed:", err)
 		return
 	}
-	klog.Infof("relay r statuscode: %d", response.StatusCode)
 
 	repbody, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -495,12 +500,11 @@ func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer
 		}
 	}()
 
-	klog.Infof("relay r body: %s", repbody)
 	if response.StatusCode != http.StatusOK {
 		klog.Errorf("client failed")
 		return
 	}
-	klog.Infof("Relay client end")
+	klog.Infof("Relay client end, status is:%v, body is:%v", response.StatusCode, repbody)
 }
 
 func (er *EdgeRelay) GetAddress(nodeID string) v1.NodeAddress {
