@@ -214,7 +214,8 @@ func (mh *MessageHandle) RelayHandleServer(container *mux.MessageContainer) {
 		err := mh.PubToController(&model.HubInfo{ProjectID: projectID, NodeID: nodeID}, rcontainer.Message)
 		if err != nil {
 			// if err, we should stop node, write data to edgehub, stop nodify
-			klog.Errorf("Failed to serve handle with error: %s", err.Error())
+			klog.Errorf("Failed to serve handle with error: %s", err.Error()
+			
 		}
 	}
 }
