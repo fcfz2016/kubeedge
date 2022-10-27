@@ -276,6 +276,7 @@ func (mh *MessageHandle) KeepaliveCheckLoop(info *model.HubInfo, stopServe chan 
 				}
 			}
 			klog.V(4).Infof("Node %s is still alive", info.NodeID)
+			klog.Infof("Node %s is still alive", info.NodeID)
 			keepaliveTicker.Reset(time.Duration(mh.KeepaliveInterval) * time.Second)
 		case <-keepaliveTicker.C:
 			klog.Errorf("node fail with keepalive:%v", info.NodeID)

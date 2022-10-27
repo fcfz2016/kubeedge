@@ -158,7 +158,7 @@ func (eh *EdgeHub) routeToCloud() {
 		if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
 			klog.Errorf("test routeToCloud with relaystatus in relaymode: %v", relayConfig.Config.GetStatus())
 			beehiveContext.Send(modules.EdgeRelayModuleName, message)
-			return
+			continue
 		}
 		err = eh.tryThrottle(message.GetID())
 		if err != nil {
