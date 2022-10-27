@@ -107,7 +107,7 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 		//	if isListResource(&msg) {
 		//		q.raddListMessageToQueue(rnodeID, rmsg)
 		//	} else {
-		//		q.raddMessageToQueue(rnodeID, rmsg, &msg)
+		//		q.raddMessageToQueue(nodeID, rnodeID, rmsg, &msg)
 		//	}
 		//	continue
 		//}
@@ -119,9 +119,9 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 		}
 	}
 }
-func (q *ChannelMessageQueue) raddListMessageToQueue(nodeID string, msg *beehiveModel.Message) {
-	nodeListQueue := q.GetNodeListQueue(nodeID)
-	nodeListStore := q.GetNodeListStore(nodeID)
+func (q *ChannelMessageQueue) raddListMessageToQueue(rnodeID string, msg *beehiveModel.Message) {
+	nodeListQueue := q.GetNodeListQueue(rnodeID)
+	nodeListStore := q.GetNodeListStore(rnodeID)
 
 	messageKey, _ := getListMsgKey(msg)
 
@@ -132,13 +132,13 @@ func (q *ChannelMessageQueue) raddListMessageToQueue(nodeID string, msg *beehive
 	nodeListQueue.Add(messageKey)
 }
 
-func (q *ChannelMessageQueue) raddMessageToQueue(nodeID string, rmsg *beehiveModel.Message, msg *beehiveModel.Message) {
-	if rmsg.GetResourceVersion() == "" && !isDeleteMessage(msg) {
+func (q *ChannelMessageQueue) raddMessageToQueue(nodeID string, rnodeID string, rmsg *beehiveModel.Message, msg *beehiveModel.Message) {
+	if msg.GetResourceVersion() == "" && !isDeleteMessage(msg) {
 		return
 	}
 
-	nodeQueue := q.GetNodeQueue(nodeID)
-	nodeStore := q.GetNodeStore(nodeID)
+	nodeQueue := q.GetNodeQueue(rnodeID)
+	nodeStore := q.GetNodeStore(rnodeID)
 
 	messageKey, err := getMsgKey(rmsg)
 	if err != nil {
@@ -153,25 +153,27 @@ func (q *ChannelMessageQueue) raddMessageToQueue(nodeID string, rmsg *beehiveMod
 		// If the message doesn't exist in the store, then compare it with
 		// the version stored in the database
 		if !exist {
-			resourceNamespace, _ := messagelayer.GetNamespace(*rmsg)
-			resourceName, _ := messagelayer.GetResourceName(*rmsg)
-			resourceUID, err := GetMessageUID(*rmsg)
+			resourceNamespace, _ := messagelayer.GetNamespace(*msg)
+			resourceName, _ := messagelayer.GetResourceName(*msg)
+			resourceUID, err := GetMessageUID(*msg)
 			objectSyncName := synccontroller.BuildObjectSyncName(nodeID, resourceUID)
 			if err != nil {
-				klog.Errorf("fail to get message UID for message: %s", rmsg.Header.ID)
+				klog.Errorf("fail to get message UID for message: %s", msg.Header.ID)
 				return
 			}
 			objectSync, err := q.objectSyncLister.ObjectSyncs(resourceNamespace).Get(objectSyncName)
+			// 当前版本等于或者小于旧版本
 			if err == nil && objectSync.Status.ObjectResourceVersion != "" && synccontroller.CompareResourceVersion(msg.GetResourceVersion(), objectSync.Status.ObjectResourceVersion) <= 0 {
 				return
 			} else if err != nil && apierrors.IsNotFound(err) {
+				// 创建一个
 				objectSync := &v1alpha1.ObjectSync{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: objectSyncName,
 					},
 					Spec: v1alpha1.ObjectSyncSpec{
-						ObjectAPIVersion: util.GetMessageAPIVersion(rmsg),
-						ObjectKind:       util.GetMessageResourceType(rmsg),
+						ObjectAPIVersion: util.GetMessageAPIVersion(msg),
+						ObjectKind:       util.GetMessageResourceType(msg),
 						ObjectName:       resourceName,
 					},
 				}
@@ -188,7 +190,7 @@ func (q *ChannelMessageQueue) raddMessageToQueue(nodeID string, rmsg *beehiveMod
 		} else {
 			// Check if message is older than already in store, if it is, discard it directly
 			msgInStore := item.(*beehiveModel.Message)
-			if isDeleteMessage(msgInStore) || synccontroller.CompareResourceVersion(rmsg.GetResourceVersion(), msgInStore.GetResourceVersion()) <= 0 {
+			if isDeleteMessage(msgInStore) || synccontroller.CompareResourceVersion(msg.GetResourceVersion(), msgInStore.GetResourceVersion()) <= 0 {
 				return
 			}
 		}
@@ -201,6 +203,7 @@ func (q *ChannelMessageQueue) raddMessageToQueue(nodeID string, rmsg *beehiveMod
 	nodeQueue.Add(messageKey)
 }
 func (q *ChannelMessageQueue) addListMessageToQueue(nodeID string, msg *beehiveModel.Message) {
+	klog.Infof("addListMessageToQueue")
 	nodeListQueue := q.GetNodeListQueue(nodeID)
 	nodeListStore := q.GetNodeListStore(nodeID)
 
@@ -214,6 +217,7 @@ func (q *ChannelMessageQueue) addListMessageToQueue(nodeID string, msg *beehiveM
 }
 
 func (q *ChannelMessageQueue) addMessageToQueue(nodeID string, msg *beehiveModel.Message) {
+	klog.Infof("addMessageToQueue")
 	if msg.GetResourceVersion() == "" && !isDeleteMessage(msg) {
 		return
 	}

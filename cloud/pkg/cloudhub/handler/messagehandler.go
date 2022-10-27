@@ -175,8 +175,9 @@ func (mh *MessageHandle) HandleServer(container *mux.MessageContainer, writer mu
 
 // RelayHandleServer handle relay message from edge
 func (mh *MessageHandle) RelayHandleServer(container *mux.MessageContainer) {
-
+	klog.Infof("RelayHandler handle container:%v", container)
 	rcontainer := cloudrelay.RelayHandle.UnsealMessage(container)
+	klog.Infof("RelayHandler handle container(after unmarshal):%v", rcontainer)
 
 	nodeID := rcontainer.Header.Get("node_id")
 	projectID := rcontainer.Header.Get("project_id")
@@ -556,6 +557,49 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 	}
 }
 
+func (mh *MessageHandle) rsendMsg(hi hubio.CloudHubIO, info *model.HubInfo, copyMsg, msg *beehiveModel.Message, nodeStore cache.Store) error {
+	ackChan := make(chan struct{})
+	mh.MessageAcks.Store(copyMsg.GetID(), ackChan)
+
+	// initialize timer and retry count for sending message
+	var (
+		retry                       = 0
+		retryInterval time.Duration = 5
+	)
+	ticker := time.NewTimer(retryInterval * time.Second)
+
+	copyMsg, oldMsg, err := unsaelMsg(copyMsg)
+	if err != nil {
+		return fmt.Errorf("rsendMsg extract oldID failed:%v", copyMsg)
+	}
+	oldID := getNodeID(oldMsg.GetResource())
+
+	err = mh.send(hi, info, copyMsg)
+	if err != nil {
+		return err
+	}
+LOOP:
+	for {
+		select {
+		case <-ackChan:
+			newInfo := deepCopyInfo(oldID, info)
+			mh.saveSuccessPoint(oldMsg, newInfo, nodeStore)
+			break LOOP
+		case <-ticker.C:
+			if retry == 4 {
+				return errors.New("failed to send message in five times")
+			}
+			err := mh.send(hi, info, copyMsg)
+			if err != nil {
+				return err
+			}
+			retry++
+			ticker.Reset(time.Second * retryInterval)
+		}
+	}
+	return nil
+}
+
 func (mh *MessageHandle) sendMsg(hi hubio.CloudHubIO, info *model.HubInfo, copyMsg, msg *beehiveModel.Message, nodeStore cache.Store) error {
 	ackChan := make(chan struct{})
 	mh.MessageAcks.Store(copyMsg.GetID(), ackChan)
@@ -693,5 +737,33 @@ func deepcopy(msg *beehiveModel.Message) *beehiveModel.Message {
 	out.Header = msg.Header
 	out.Router = msg.Router
 	out.Content = msg.Content
+	return out
+}
+
+func unsaelMsg(msg *beehiveModel.Message) (*beehiveModel.Message, *beehiveModel.Message, error) {
+	oldMsg, ok := msg.Content.(*beehiveModel.Message)
+	if !ok {
+		return nil, nil, fmt.Errorf("unknown type")
+	}
+
+	return msg, oldMsg, nil
+}
+
+func getNodeID(resource string) string {
+	sli := strings.Split(resource, "/")
+	if len(sli) < 3 {
+		klog.Errorf("no relayID")
+		return ""
+	}
+	return sli[1]
+}
+
+func deepCopyInfo(oldID string, info *model.HubInfo) *model.HubInfo {
+	if info == nil {
+		return nil
+	}
+	out := new(model.HubInfo)
+	out.NodeID = oldID
+	out.ProjectID = info.ProjectID
 	return out
 }

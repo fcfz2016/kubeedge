@@ -40,6 +40,7 @@ const (
 // GpResource constants for message group
 const (
 	GpResource = "resource"
+	GpRelay    = "relay"
 )
 
 // constants for message source

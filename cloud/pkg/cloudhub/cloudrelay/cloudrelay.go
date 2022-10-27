@@ -69,22 +69,23 @@ func (relayHandle *CloudRelay) ChangeDesToRelay(msg *beehiveModel.Message) (stri
 }
 
 func (relayHandle *CloudRelay) SealMessage(msg *beehiveModel.Message) (string, *beehiveModel.Message, error) {
+	klog.Infof("cloudrelay begin to seal msg:%v", msg)
 	nodeID := relayHandle.relayID
 	oldID, resource, err := messagelayer.BuildResource(nodeID, msg.Router.Resource)
 	if err != nil {
 		return oldID, msg, fmt.Errorf("build relay node resource failed")
 	}
-	relayMsg := msg.Clone(msg)
+	relayMsg := deepcopy(msg)
 
-	relayMsg.Header.ID = msg.Header.ID
 	relayMsg.Router.Resource = resource
 	relayMsg.Router.Group = constants.RelayGroupName
-
-	//contentMsg, err := json.Marshal(msg)
-	if err != nil {
-		klog.V(4).Infof("RelayHandleServer Umarshal failed", err)
-	}
 	relayMsg.Content = msg
+	//contentMsg, err := json.Marshal(msg)
+	//if err != nil {
+	//	klog.Errorf("RelayHandleServer Umarshal failed", err)
+	//}
+
+	klog.Infof("cloudrelay's seal job finished:%v", relayMsg)
 	return oldID, relayMsg, nil
 }
 
@@ -100,6 +101,7 @@ func (relayHandle *CloudRelay) UnsealMessage(container *mux.MessageContainer) *m
 		klog.Infof("UnsealMessage Unmarshal failed:%v", err)
 		return nil
 	}
+	klog.Infof("cloudrelay unsealmesg:%v", rcontainer)
 
 	return rcontainer
 }
@@ -115,4 +117,14 @@ func (relayHandle *CloudRelay) GetStatus() bool {
 }
 func (relayHandle *CloudRelay) SetStatus(status bool) {
 	relayHandle.status = status
+}
+func deepcopy(msg *beehiveModel.Message) *beehiveModel.Message {
+	if msg == nil {
+		return nil
+	}
+	out := new(beehiveModel.Message)
+	out.Header = msg.Header
+	out.Router = msg.Router
+	out.Content = msg.Content
+	return out
 }
