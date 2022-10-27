@@ -185,6 +185,11 @@ func (mh *MessageHandle) RelayHandleServer(container *mux.MessageContainer) {
 	if rcontainer.Message.GetOperation() == model.OpKeepalive {
 		klog.Infof("Keepalive message received from node: %s", nodeID)
 
+		if _, exist := mh.nodeConns.Load(nodeID); !exist {
+			// todo：测试此操作是否违规，可以加个全局map保存
+			mh.nodeConns.Store(nodeID, nil)
+		}
+
 		nodeKeepalive, ok := mh.KeepaliveChannel.Load(nodeID)
 		if !ok {
 			klog.Errorf("Failed to load node : %s", nodeID)
