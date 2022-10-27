@@ -183,7 +183,7 @@ func (mh *MessageHandle) RelayHandleServer(container *mux.MessageContainer) {
 	projectID := rcontainer.Header.Get("project_id")
 
 	if rcontainer.Message.GetOperation() == model.OpKeepalive {
-		klog.V(4).Infof("Keepalive message received from node: %s", nodeID)
+		klog.Infof("Keepalive message received from node: %s", nodeID)
 
 		nodeKeepalive, ok := mh.KeepaliveChannel.Load(nodeID)
 		if !ok {
