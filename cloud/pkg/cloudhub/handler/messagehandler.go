@@ -190,6 +190,7 @@ func (mh *MessageHandle) RelayHandleServer(container *mux.MessageContainer) {
 			klog.Errorf("Failed to load node : %s", nodeID)
 			return
 		}
+		klog.Infof("Keepalive message from node: %s, and send single to nodeKeepalive", nodeID)
 		nodeKeepalive.(chan struct{}) <- struct{}{}
 		return
 	}
@@ -261,6 +262,7 @@ func (mh *MessageHandle) KeepaliveCheckLoop(info *model.HubInfo, stopServe chan 
 	for {
 		select {
 		case _, ok := <-nodeKeepaliveChannel.(chan struct{}):
+			klog.Infof("received keepalive check from node:%v", info.NodeID)
 			if !ok {
 				klog.Warningf("Stop keepalive check for node: %s", info.NodeID)
 				return
