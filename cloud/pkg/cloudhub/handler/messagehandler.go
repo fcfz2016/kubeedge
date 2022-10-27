@@ -276,6 +276,7 @@ func (mh *MessageHandle) KeepaliveCheckLoop(info *model.HubInfo, stopServe chan 
 			klog.V(4).Infof("Node %s is still alive", info.NodeID)
 			keepaliveTicker.Reset(time.Duration(mh.KeepaliveInterval) * time.Second)
 		case <-keepaliveTicker.C:
+			klog.Errorf("node fail with keepalive:%v", info.NodeID)
 			if conn, ok := mh.nodeConns.Load(info.NodeID); ok {
 				klog.Warningf("Timeout to receive heart beat from edge node %s for project %s", info.NodeID, info.ProjectID)
 				if err := conn.(hubio.CloudHubIO).Close(); err != nil {
