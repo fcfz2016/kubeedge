@@ -190,7 +190,8 @@ func (eh *EdgeHub) keepalive() {
 		if relayConfig.Config.GetStatus() && !relayConfig.Config.GetIsRelayNode() {
 			klog.Infof("test keepalive with relaystatus in relaymode: %v", relayConfig.Config.GetStatus())
 			beehiveContext.Send(modules.EdgeRelayModuleName, *msg)
-			return
+			time.Sleep(time.Duration(config.Config.Heartbeat) * time.Second)
+			continue
 		}
 		// post message to cloud hub
 		err := eh.sendToCloud(*msg)

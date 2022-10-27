@@ -543,7 +543,13 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 		copyMsg := deepcopy(msg)
 		trimMessage(copyMsg)
 
-		err := mh.sendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
+		var err error
+		if cloudrelay.RelayHandle.GetStatus() && cloudrelay.RelayHandle.GetRelayId() != "" {
+			err = mh.rsendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
+		} else {
+			err = mh.sendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
+		}
+
 		if err != nil {
 			klog.Errorf("Failed to send event to node: %s, affected event: %s, err: %s",
 				info.NodeID, dumpMessageMetadata(copyMsg), err.Error())
