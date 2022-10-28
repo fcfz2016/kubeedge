@@ -70,7 +70,7 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 			klog.Info("receive not Message format message")
 			continue
 		}
-
+		klog.Infof("dispatchMessage,%v", msg)
 		//msgResource := msg.GetResource()
 		//if strings.Contains(msgResource, "relayrcs") {
 		//	// conn, ok := mh.nodeConns.Load(info.NodeID)
