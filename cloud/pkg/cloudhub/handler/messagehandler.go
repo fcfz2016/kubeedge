@@ -552,10 +552,10 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 		var err error
 
 		if copyMsg.Router.Group == relayconstants.RelayGroupName {
-			klog.Infof("rsendMsg test, msg is %v", copyMsg)
+			klog.Infof("rsendMsg test, msg is %v, group is %v", copyMsg, copyMsg.GetGroup())
 			err = mh.rsendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
 		} else {
-			klog.Infof("sendMsg test, msg is %v", copyMsg)
+			klog.Infof("sendMsg test, msg is %v, group is %v", copyMsg, copyMsg.GetGroup())
 			err = mh.sendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
 		}
 
