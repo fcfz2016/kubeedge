@@ -71,26 +71,25 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 			continue
 		}
 
-		msgResource := msg.GetResource()
-		if strings.Contains(msgResource, "relayrcs") {
-			// conn, ok := mh.nodeConns.Load(info.NodeID)
-			klog.Warningf("begin to handle relaycontroller message")
-			switch msg.Router.Operation {
-			case "openrelay":
-				klog.Infof("relaycontroller open,%v", msg)
-				break
-			case "closerelay":
-				klog.Warningf("reloycontroller close")
-				break
-			case "updatedatarelay":
-			case "updateidrelay":
-				klog.Warningf("relaycontroller update")
-			default:
-				klog.Warningf("relaycontroller default")
-				break
-			}
-		}
-
+		//msgResource := msg.GetResource()
+		//if strings.Contains(msgResource, "relayrcs") {
+		//	// conn, ok := mh.nodeConns.Load(info.NodeID)
+		//	klog.Warningf("begin to handle relaycontroller message")
+		//	switch msg.Router.Operation {
+		//	case "openrelay":
+		//		klog.Infof("relaycontroller open,%v", msg)
+		//		break
+		//	case "closerelay":
+		//		klog.Warningf("reloycontroller close")
+		//		break
+		//	case "updatedatarelay":
+		//	case "updateidrelay":
+		//		klog.Warningf("relaycontroller update")
+		//	default:
+		//		klog.Warningf("relaycontroller default")
+		//		break
+		//	}
+		//}
 		nodeID, err := GetNodeID(&msg)
 		if nodeID == "" || err != nil {
 			klog.Warning("node id is not found in the message")
@@ -107,9 +106,11 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 			}
 
 			if isListResource(&msg) {
+				klog.Infof("begin raadListMessageToQueue,%v", rmsg)
 				q.raddListMessageToQueue(rnodeID, rmsg)
 			} else {
-				q.raddMessageToQueue(nodeID, rnodeID, rmsg, &msg)
+				klog.Infof("begin raadMessageToQueue,%v", rmsg)
+				q.raddMessageToQueue(rnodeID, nodeID, rmsg, &msg)
 			}
 			continue
 		}
@@ -134,7 +135,7 @@ func (q *ChannelMessageQueue) raddListMessageToQueue(rnodeID string, msg *beehiv
 	nodeListQueue.Add(messageKey)
 }
 
-func (q *ChannelMessageQueue) raddMessageToQueue(nodeID string, rnodeID string, rmsg *beehiveModel.Message, msg *beehiveModel.Message) {
+func (q *ChannelMessageQueue) raddMessageToQueue(rnodeID string, nodeID string, rmsg *beehiveModel.Message, msg *beehiveModel.Message) {
 	if msg.GetResourceVersion() == "" && !isDeleteMessage(msg) {
 		return
 	}

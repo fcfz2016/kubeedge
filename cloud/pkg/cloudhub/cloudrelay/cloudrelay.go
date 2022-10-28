@@ -85,7 +85,7 @@ func (relayHandle *CloudRelay) SealMessage(msg *beehiveModel.Message) (string, *
 	//	klog.Errorf("RelayHandleServer Umarshal failed", err)
 	//}
 
-	klog.Infof("cloudrelay's seal job finished:%v", relayMsg)
+	klog.Infof("cloudrelay's seal job finished,relayMsg.resource is:%v,group is:%v", relayMsg.GetResource(), relayMsg.GetGroup())
 	return oldID, relayMsg, nil
 }
 

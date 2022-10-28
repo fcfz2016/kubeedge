@@ -552,8 +552,10 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 		var err error
 
 		if copyMsg.Router.Group == relayconstants.RelayGroupName {
+			klog.Infof("rsendMsg test, msg is %v", copyMsg)
 			err = mh.rsendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
 		} else {
+			klog.Infof("sendMsg test, msg is %v", copyMsg)
 			err = mh.sendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
 		}
 
@@ -598,6 +600,7 @@ LOOP:
 	for {
 		select {
 		case <-ackChan:
+			klog.Infof("get ackChan successed,%v", msg)
 			newInfo := deepCopyInfo(oldID, info)
 			mh.saveSuccessPoint(oldMsg, newInfo, nodeStore)
 			break LOOP
