@@ -550,7 +550,8 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 		trimMessage(copyMsg)
 
 		var err error
-		if cloudrelay.RelayHandle.GetStatus() && cloudrelay.RelayHandle.GetRelayId() != "" {
+
+		if copyMsg.Router.Group == relayconstants.RelayGroupName {
 			err = mh.rsendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
 		} else {
 			err = mh.sendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)

@@ -3,6 +3,7 @@ package channelq
 import (
 	"context"
 	"fmt"
+	"github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/cloudrelay"
 	"strings"
 	"sync"
 
@@ -96,21 +97,21 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 		}
 
 		// relay模式下向relay节点发送数据
-		//rnodeID := cloudrelay.RelayHandle.GetRelayId()
-		//if nodeID != rnodeID && cloudrelay.RelayHandle.GetStatus() && rnodeID != "" {
-		//	_, rmsg, err := cloudrelay.RelayHandle.SealMessage(&msg)
-		//	if err != nil {
-		//		klog.Warning("sealmessage failed in cloudhub")
-		//		continue
-		//	}
-		//
-		//	if isListResource(&msg) {
-		//		q.raddListMessageToQueue(rnodeID, rmsg)
-		//	} else {
-		//		q.raddMessageToQueue(nodeID, rnodeID, rmsg, &msg)
-		//	}
-		//	continue
-		//}
+		rnodeID := cloudrelay.RelayHandle.GetRelayId()
+		if nodeID != rnodeID && cloudrelay.RelayHandle.GetStatus() && rnodeID != "" {
+			_, rmsg, err := cloudrelay.RelayHandle.SealMessage(&msg)
+			if err != nil {
+				klog.Warning("sealmessage failed in cloudhub")
+				continue
+			}
+
+			if isListResource(&msg) {
+				q.raddListMessageToQueue(rnodeID, rmsg)
+			} else {
+				q.raddMessageToQueue(nodeID, rnodeID, rmsg, &msg)
+			}
+			continue
+		}
 
 		if isListResource(&msg) {
 			q.addListMessageToQueue(nodeID, &msg)
