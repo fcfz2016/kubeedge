@@ -300,6 +300,7 @@ func getMsgKey(obj interface{}) (string, error) {
 			resourceNamespace, _ := messagelayer.GetNamespace(*msg)
 			resourceName, _ := messagelayer.GetResourceName(*msg)
 			return strings.Join([]string{resourceType, resourceNamespace, resourceName}, "/"), nil
+
 		}
 	}
 
