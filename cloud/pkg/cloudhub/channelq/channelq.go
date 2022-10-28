@@ -116,8 +116,10 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 		}
 
 		if isListResource(&msg) {
+			klog.Infof("begin aadListMessageToQueue,%v", msg)
 			q.addListMessageToQueue(nodeID, &msg)
 		} else {
+			klog.Infof("begin aadMessageToQueue,%v", msg)
 			q.addMessageToQueue(nodeID, &msg)
 		}
 	}
