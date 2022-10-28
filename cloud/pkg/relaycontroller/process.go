@@ -38,6 +38,7 @@ func (rc *RelayController) checkRelay() {
 			}
 			switch e.Type {
 			case watch.Added:
+				klog.Info("relaycontroller added begin")
 				rc.relayrcAdded(relayrc)
 			case watch.Deleted:
 				rc.relayrcDeleted(relayrc)

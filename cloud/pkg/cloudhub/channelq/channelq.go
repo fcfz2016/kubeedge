@@ -16,6 +16,7 @@ import (
 
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	beehiveModel "github.com/kubeedge/beehive/pkg/core/model"
+	relayConstants "github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/cloudrelay/constants"
 	"github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/common/model"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/messagelayer"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/modules"
@@ -289,6 +290,18 @@ func (q *ChannelMessageQueue) addMessageToQueue(nodeID string, msg *beehiveModel
 
 func getMsgKey(obj interface{}) (string, error) {
 	msg := obj.(*beehiveModel.Message)
+
+	if msg.GetGroup() == relayConstants.RelayGroupName {
+		oldMsg, ok := msg.Content.(*beehiveModel.Message)
+		if !ok {
+			klog.Errorf("unknow type")
+		} else if oldMsg.GetGroup() == edgeconst.GroupResource {
+			resourceType, _ := messagelayer.GetResourceType(*msg)
+			resourceNamespace, _ := messagelayer.GetNamespace(*msg)
+			resourceName, _ := messagelayer.GetResourceName(*msg)
+			return strings.Join([]string{resourceType, resourceNamespace, resourceName}, "/"), nil
+		}
+	}
 
 	if msg.GetGroup() == edgeconst.GroupResource {
 		resourceType, _ := messagelayer.GetResourceType(*msg)
