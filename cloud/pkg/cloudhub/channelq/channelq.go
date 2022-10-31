@@ -116,10 +116,10 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 		}
 
 		if isListResource(&msg) {
-			klog.Infof("begin aadListMessageToQueue,%v", msg)
+			klog.Infof("begin addListMessageToQueue,%v", msg)
 			q.addListMessageToQueue(nodeID, &msg)
 		} else {
-			klog.Infof("begin aadMessageToQueue,%v", msg)
+			klog.Infof("begin addMessageToQueue,%v", msg)
 			q.addMessageToQueue(nodeID, &msg)
 		}
 	}
@@ -195,7 +195,11 @@ func (q *ChannelMessageQueue) raddMessageToQueue(rnodeID string, nodeID string, 
 		} else {
 			// Check if message is older than already in store, if it is, discard it directly
 			msgInStore := item.(*beehiveModel.Message)
-			if isDeleteMessage(msgInStore) || synccontroller.CompareResourceVersion(msg.GetResourceVersion(), msgInStore.GetResourceVersion()) <= 0 {
+			oldMsgInStore, err := unsaelMsg(msgInStore)
+			if err != nil {
+				klog.Errorf("raddMessageToQueue delete error:%v", err)
+			}
+			if isDeleteMessage(oldMsgInStore) || synccontroller.CompareResourceVersion(msg.GetResourceVersion(), msgInStore.GetResourceVersion()) <= 0 {
 				return
 			}
 		}
@@ -373,7 +377,7 @@ func isDeleteMessage(msg *beehiveModel.Message) bool {
 	}
 	deletionTimestamp, err := GetMessageDeletionTimestamp(msg)
 	if err != nil {
-		klog.Errorf("fail to get message DeletionTimestamp for message: %s", msg.Header.ID)
+		klog.Errorf("fail to get message DeletionTimestamp for message: %s, err:%v", msg.Header.ID, err)
 		return false
 	} else if deletionTimestamp != nil {
 		return true
@@ -541,4 +545,13 @@ func GetMessageDeletionTimestamp(msg *beehiveModel.Message) (*metav1.Time, error
 	}
 
 	return accessor.GetDeletionTimestamp(), nil
+}
+
+func unsaelMsg(msg *beehiveModel.Message) (*beehiveModel.Message, error) {
+	oldMsg, ok := msg.Content.(*beehiveModel.Message)
+	if !ok {
+		return nil, fmt.Errorf("unknown type")
+	}
+
+	return oldMsg, nil
 }
