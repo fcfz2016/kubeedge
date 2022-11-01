@@ -65,10 +65,14 @@ func (*defaultHandler) Filter(message *model.Message) bool {
 func (*defaultHandler) Process(message *model.Message, clientHub clients.Adapter) error {
 	group := message.GetGroup()
 
+	if group == messagepkg.RelayGroupName {
+		klog.Infof("edgehub process relay msg:%v", message)
+		beehiveContext.SendToGroup(modules.RelayGroup, *message)
+		return nil
+	}
+
 	md := ""
 	switch group {
-	case messagepkg.RelayGroupName:
-		md = modules.RelayGroup
 	case messagepkg.ResourceGroupName:
 		md = modules.MetaGroup
 	case messagepkg.TwinGroupName:
