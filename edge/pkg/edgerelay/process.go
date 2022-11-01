@@ -247,7 +247,9 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 			break
 		case common.RelayOpenOperation:
 			er.Save(status, relayID, relayData)
-			er.FirstSwitch()
+			if relayID != config.Config.GetNodeID() {
+				er.FirstSwitch()
+			}
 			break
 		case common.RelayUpdateDataOperation:
 			er.SaveDate(relayData)

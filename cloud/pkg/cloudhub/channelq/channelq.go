@@ -138,7 +138,6 @@ func (q *ChannelMessageQueue) raddListMessageToQueue(rnodeID string, msg *beehiv
 }
 
 func (q *ChannelMessageQueue) raddMessageToQueue(rnodeID string, nodeID string, rmsg *beehiveModel.Message, msg *beehiveModel.Message) {
-	klog.Infof("raddListMessageToQueue block1,%v,%v", rmsg, msg)
 	if msg.GetResourceVersion() == "" && !isDeleteMessage(msg) {
 		return
 	}
@@ -151,11 +150,9 @@ func (q *ChannelMessageQueue) raddMessageToQueue(rnodeID string, nodeID string, 
 		klog.Errorf("fail to get message key for message: %s", rmsg.Header.ID)
 		return
 	}
-	klog.Infof("raddListMessageToQueue block2,%v,%v", rmsg, msg)
 	//if the operation is delete, force to sync the resource message
 	//if the operation is response, force to sync the resource message, since the edgecore requests it
 	if !isDeleteMessage(msg) && msg.GetOperation() != beehiveModel.ResponseOperation {
-		klog.Infof("raddListMessageToQueue block23,%v,%v", rmsg, msg)
 		item, exist, _ := nodeStore.GetByKey(messageKey)
 		// If the message doesn't exist in the store, then compare it with
 		// the version stored in the database
@@ -195,7 +192,6 @@ func (q *ChannelMessageQueue) raddMessageToQueue(rnodeID string, nodeID string, 
 				}
 			}
 		} else {
-			klog.Infof("raddListMessageToQueue block4,%v,%v", rmsg, msg)
 			// Check if message is older than already in store, if it is, discard it directly
 			msgInStore := item.(*beehiveModel.Message)
 			oldMsgInStore, err := unsaelMsg(msgInStore)
@@ -207,7 +203,6 @@ func (q *ChannelMessageQueue) raddMessageToQueue(rnodeID string, nodeID string, 
 			}
 		}
 	}
-	klog.Infof("raddListMessageToQueue block5,%v,%v", rmsg, msg)
 	if err := nodeStore.Add(rmsg); err != nil {
 		klog.Errorf("fail to add message %v nodeStore, err: %v", rmsg, err)
 		return

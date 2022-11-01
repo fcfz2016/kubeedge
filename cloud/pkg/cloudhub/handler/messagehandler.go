@@ -185,10 +185,11 @@ func (mh *MessageHandle) RelayHandleServer(container *mux.MessageContainer) {
 	if rcontainer.Message.GetOperation() == model.OpKeepalive {
 		klog.Infof("Keepalive message received from node: %s", nodeID)
 
-		if _, exist := mh.nodeConns.Load(nodeID); !exist {
-			// todo：测试此操作是否违规，可以加个全局map保存
-			mh.nodeConns.Store(nodeID, nil)
-		}
+		//if _, exist := mh.nodeConns.Load(nodeID); !exist {
+		//	klog.Infof("Greate fake nodeConn:%v", nodeID)
+		//	// todo：测试此操作是否违规，可以加个全局map保存
+		//	mh.nodeConns.Store(nodeID, nil)
+		//}
 
 		nodeKeepalive, ok := mh.KeepaliveChannel.Load(nodeID)
 		if !ok {
@@ -586,13 +587,8 @@ func (mh *MessageHandle) rsendMsg(hi hubio.CloudHubIO, info *model.HubInfo, copy
 	)
 	ticker := time.NewTimer(retryInterval * time.Second)
 
-	copyMsg, oldMsg, err := unsaelMsg(copyMsg)
-	if err != nil {
-		return fmt.Errorf("rsendMsg extract oldID failed:%v", copyMsg)
-	}
-	oldID := getNodeID(oldMsg.GetResource())
-
-	err = mh.send(hi, info, copyMsg)
+	klog.Infof("rsend message:%v", copyMsg)
+	err := mh.send(hi, info, copyMsg)
 	if err != nil {
 		return err
 	}
@@ -600,9 +596,8 @@ LOOP:
 	for {
 		select {
 		case <-ackChan:
-			klog.Infof("get ackChan successed,%v", msg)
-			newInfo := deepCopyInfo(oldID, info)
-			mh.saveSuccessPoint(oldMsg, newInfo, nodeStore)
+			klog.Infof("get ackChan successed, sources is:%v,msg is:%v", msg.GetResource(), msg)
+			mh.rsaveSuccessPoint(msg, info, nodeStore)
 			break LOOP
 		case <-ticker.C:
 			if retry == 4 {
@@ -661,6 +656,78 @@ func (mh *MessageHandle) send(hi hubio.CloudHubIO, info *model.HubInfo, msg *bee
 		return err
 	}
 	return nil
+}
+func (mh *MessageHandle) rsaveSuccessPoint(newMsg *beehiveModel.Message, info *model.HubInfo, nodeStore cache.Store) {
+	klog.Infof("rsaveSuccessPoint,%v", newMsg)
+	msg, _ := unsealMsg(newMsg)
+	nodeID := getNodeID(msg.GetResource())
+	if msg.GetGroup() == edgeconst.GroupResource {
+		resourceNamespace, _ := messagelayer.GetNamespace(*msg)
+		resourceName, _ := messagelayer.GetResourceName(*msg)
+		resourceType, _ := messagelayer.GetResourceType(*msg)
+		resourceUID, err := channelq.GetMessageUID(*msg)
+		if err != nil {
+			klog.Errorf("failed to get message UID %v, err: %v", msg, err)
+			return
+		}
+
+		objectSyncName := synccontroller.BuildObjectSyncName(nodeID, resourceUID)
+
+		if msg.GetOperation() == beehiveModel.DeleteOperation {
+			if err := nodeStore.Delete(newMsg); err != nil {
+				klog.Errorf("failed to delete message %v, err: %v", msg, err)
+				return
+			}
+			mh.deleteSuccessPoint(resourceNamespace, objectSyncName)
+			return
+		}
+
+		objectSync, err := mh.crdClient.ReliablesyncsV1alpha1().ObjectSyncs(resourceNamespace).Get(context.Background(), objectSyncName, metav1.GetOptions{})
+		if err == nil {
+			objectSync.Status.ObjectResourceVersion = msg.GetResourceVersion()
+			_, err := mh.crdClient.ReliablesyncsV1alpha1().ObjectSyncs(resourceNamespace).UpdateStatus(context.Background(), objectSync, metav1.UpdateOptions{})
+			if err != nil {
+				klog.Errorf("Failed to update objectSync: %v, resourceType: %s, resourceNamespace: %s, resourceName: %s",
+					err, resourceType, resourceNamespace, resourceName)
+			}
+		} else if apierrors.IsNotFound(err) {
+			objectSync := &v1alpha1.ObjectSync{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: objectSyncName,
+				},
+				Spec: v1alpha1.ObjectSyncSpec{
+					ObjectAPIVersion: util.GetMessageAPIVersion(msg),
+					ObjectKind:       util.GetMessageResourceType(msg),
+					ObjectName:       resourceName,
+				},
+			}
+			if objectSync.Spec.ObjectKind == "" {
+				klog.Errorf("Failed to init objectSync: %s, ObjectKind is empty, msg content: %v", objectSyncName, msg.GetContent())
+				return
+			}
+			_, err := mh.crdClient.ReliablesyncsV1alpha1().ObjectSyncs(resourceNamespace).Create(context.Background(), objectSync, metav1.CreateOptions{})
+			if err != nil {
+				klog.Errorf("Failed to create objectSync: %s, err: %v", objectSyncName, err)
+				return
+			}
+
+			objectSyncStatus, err := mh.crdClient.ReliablesyncsV1alpha1().ObjectSyncs(resourceNamespace).Get(context.Background(), objectSyncName, metav1.GetOptions{})
+			if err != nil {
+				klog.Errorf("Failed to get objectSync: %s, err: %v", objectSyncName, err)
+				return
+			}
+			objectSyncStatus.Status.ObjectResourceVersion = msg.GetResourceVersion()
+			if _, err := mh.crdClient.ReliablesyncsV1alpha1().ObjectSyncs(resourceNamespace).UpdateStatus(context.Background(), objectSyncStatus, metav1.UpdateOptions{}); err != nil {
+				klog.Errorf("Failed to update objectSync: %s, err: %v", objectSyncName, err)
+				return
+			}
+		}
+	}
+
+	// TODO: save device info
+	if msg.GetGroup() == deviceconst.GroupTwin {
+	}
+	klog.V(4).Infof("saveSuccessPoint successfully for message: %s", msg.GetResource())
 }
 
 func (mh *MessageHandle) saveSuccessPoint(msg *beehiveModel.Message, info *model.HubInfo, nodeStore cache.Store) {
@@ -759,13 +826,13 @@ func deepcopy(msg *beehiveModel.Message) *beehiveModel.Message {
 	return out
 }
 
-func unsaelMsg(msg *beehiveModel.Message) (*beehiveModel.Message, *beehiveModel.Message, error) {
+func unsealMsg(msg *beehiveModel.Message) (*beehiveModel.Message, error) {
 	oldMsg, ok := msg.Content.(*beehiveModel.Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unknown type")
+		return nil, fmt.Errorf("unknown type")
 	}
 
-	return msg, oldMsg, nil
+	return deepcopy(oldMsg), nil
 }
 
 func getNodeID(resource string) string {
