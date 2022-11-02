@@ -78,6 +78,7 @@ func (rc *RelayController) relayrcDeleted(relayrc *v1.Relayrc) {
 	cloudrelay.RelayHandle.SetStatus(false)
 	klog.Warningf("Relay delete")
 	cloudrelay.RelayHandle.SetRelayId("")
+	relayrc.Spec.Open = false
 	// 下发关闭信息
 	msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayCloseOperation, relayrc)
 	err := rc.messageLayer.Send(*msg)

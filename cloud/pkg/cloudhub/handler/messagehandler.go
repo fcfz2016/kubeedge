@@ -486,6 +486,11 @@ func (mh *MessageHandle) ListMessageWriteLoop(info *model.HubInfo, stopServe cha
 			klog.Infof("skip only to cloud event for node %s, %s, content %s", info.NodeID, dumpMessageMetadata(msg), msg.Content)
 			continue
 		}
+
+		if strings.Contains(msg.GetResource(), "relayrcs") {
+			mh.freshConns(msg)
+		}
+
 		klog.V(4).Infof("event to send for node %s, %s, content %s", info.NodeID, dumpMessageMetadata(msg), msg.Content)
 
 		trimMessage(msg)

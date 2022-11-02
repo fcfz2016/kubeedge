@@ -73,7 +73,6 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 		klog.Infof("dispatchMessage,%v", msg)
 		//msgResource := msg.GetResource()
 		//if strings.Contains(msgResource, "relayrcs") {
-		//	// conn, ok := mh.nodeConns.Load(info.NodeID)
 		//	klog.Warningf("begin to handle relaycontroller message")
 		//	switch msg.Router.Operation {
 		//	case "openrelay":
