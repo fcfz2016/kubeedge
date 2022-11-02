@@ -487,7 +487,7 @@ func (mh *MessageHandle) ListMessageWriteLoop(info *model.HubInfo, stopServe cha
 			continue
 		}
 
-		if strings.Contains(msg.GetResource(), "relayrcs") {
+		if strings.Contains(msg.GetResource(), "relayrcs") && msg.Router.Operation == "closerelay" {
 			mh.freshConns(msg)
 		}
 
