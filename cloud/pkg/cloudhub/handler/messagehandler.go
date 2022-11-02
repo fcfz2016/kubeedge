@@ -526,7 +526,9 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 	var ok bool
 
 	for {
+		klog.Infof("529sendMsg_temp conn state:%v", info.NodeID)
 		for {
+			klog.Infof("531sendMsg_temp conn state:%v", info.NodeID)
 			if conn, ok = mh.nodeConns.Load(info.NodeID); ok {
 				break
 			}
@@ -535,14 +537,16 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 			c.L.Lock()
 			c.Wait()
 			c.L.Unlock()
+			klog.Infof("540sendMsg_temp conn state:%v", info.NodeID)
 		}
+		klog.Infof("542sendMsg_temp conn state:%v", info.NodeID)
 		klog.Infof("sendMsg_temp conn state:%v,and conn state is:%v", info.NodeID, conn.(*hubio.JSONIO).Connection.ConnectionState().State)
 		key, quit := nodeQueue.Get()
 		if quit {
 			klog.Errorf("nodeQueue for node %s has shutdown", info.NodeID)
 			return
 		}
-
+		klog.Infof("549sendMsg_temp conn state:%v", info.NodeID)
 		obj, exist, _ := nodeStore.GetByKey(key.(string))
 		if !exist {
 			klog.Errorf("nodeStore for node %s doesn't exist", info.NodeID)
@@ -550,7 +554,7 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 			continue
 		}
 		msg := obj.(*beehiveModel.Message)
-
+		klog.Infof("557sendMsg_temp conn state:%v", info.NodeID)
 		if !model.IsToEdge(msg) {
 			klog.Infof("skip only to cloud event for node %s, %s, content %s", info.NodeID, dumpMessageMetadata(msg), msg.Content)
 			nodeQueue.Done(key)
@@ -560,7 +564,7 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 
 		copyMsg := deepcopy(msg)
 		trimMessage(copyMsg)
-
+		klog.Infof("567sendMsg_temp conn state:%v", info.NodeID)
 		var err error
 
 		if copyMsg.Router.Group == relayconstants.RelayGroupName {
