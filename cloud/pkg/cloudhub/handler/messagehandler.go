@@ -573,6 +573,9 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 		} else {
 			klog.Infof("sendMsg test, msg is %v, group is %v", copyMsg, copyMsg.GetGroup())
 			klog.Infof("sendMsg conn state:%v,and conn state is:%v", info.NodeID, conn.(*hubio.JSONIO).Connection.ConnectionState().State)
+			if conn, ok = mh.nodeConns.Load(info.NodeID); ok {
+				klog.Infof("fresh Conn failed")
+			}
 			err = mh.sendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
 		}
 
