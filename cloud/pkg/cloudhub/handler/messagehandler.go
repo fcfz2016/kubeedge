@@ -232,7 +232,7 @@ func (mh *MessageHandle) OnRegister(connection conn.Connection) {
 
 	nodeID := connection.ConnectionState().Headers.Get("node_id")
 	projectID := connection.ConnectionState().Headers.Get("project_id")
-	klog.Infof("begin OnRegister:%v", nodeID)
+	klog.Infof("begin OnRegister:%v,and conn state is:%v", nodeID, connection.ConnectionState().State)
 
 	if _, ok := mh.KeepaliveChannel.Load(nodeID); !ok {
 		mh.KeepaliveChannel.Store(nodeID, make(chan struct{}, 1))
@@ -567,6 +567,7 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 			err = mh.rsendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
 		} else {
 			klog.Infof("sendMsg test, msg is %v, group is %v", copyMsg, copyMsg.GetGroup())
+			klog.Infof("begin OnRegister:%v,and conn state is:%v", info.NodeID, conn.(hubio.JSONIO).Connection.ConnectionState().State)
 			err = mh.sendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
 		}
 
