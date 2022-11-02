@@ -536,6 +536,7 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 			c.Wait()
 			c.L.Unlock()
 		}
+		klog.Infof("sendMsg_temp conn state:%v,and conn state is:%v", info.NodeID, conn.(*hubio.JSONIO).Connection.ConnectionState().State)
 		key, quit := nodeQueue.Get()
 		if quit {
 			klog.Errorf("nodeQueue for node %s has shutdown", info.NodeID)
