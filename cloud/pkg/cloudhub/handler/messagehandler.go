@@ -229,8 +229,10 @@ func (mh *MessageHandle) RelayHandleServer(container *mux.MessageContainer) {
 
 // OnRegister register node on first connection
 func (mh *MessageHandle) OnRegister(connection conn.Connection) {
+
 	nodeID := connection.ConnectionState().Headers.Get("node_id")
 	projectID := connection.ConnectionState().Headers.Get("project_id")
+	klog.Infof("begin OnRegister:%v", nodeID)
 
 	if _, ok := mh.KeepaliveChannel.Load(nodeID); !ok {
 		mh.KeepaliveChannel.Store(nodeID, make(chan struct{}, 1))
@@ -243,6 +245,7 @@ func (mh *MessageHandle) OnRegister(connection conn.Connection) {
 	}
 
 	if _, ok := mh.nodeRegistered.Load(nodeID); ok {
+		klog.Infof("OnRegister load")
 		if conn, exist := mh.nodeConns.Load(nodeID); exist {
 			if err := conn.(hubio.CloudHubIO).Close(); err != nil {
 				klog.Errorf("failed to close connection %v, err is %v", conn, err)
@@ -865,12 +868,13 @@ func (mh *MessageHandle) freshConns(msg *beehiveModel.Message) {
 
 	for k, _ := range relayrc.Data.AddrData {
 		if k != relayrc.RelayID {
-			if conn, ok := mh.nodeConns.Load(k); ok {
-				klog.Warningf("begin to remove conn %v", k)
-				if err := conn.(hubio.CloudHubIO).Close(); err != nil {
-					klog.Errorf("failed to close connection %v, err is %v", conn, err)
-				}
-				mh.nodeConns.Delete(k)
+			if _, ok := mh.nodeConns.Load(k); ok {
+				//klog.Warningf("begin to remove conn %v", k)
+				//if err := conn.(hubio.CloudHubIO).Close(); err != nil {
+				//	klog.Errorf("failed to close connection %v, err is %v", conn, err)
+				//}
+				//mh.nodeConns.Delete(k)
+				klog.Infof("conn %s is exist", k)
 			}
 		}
 	}
