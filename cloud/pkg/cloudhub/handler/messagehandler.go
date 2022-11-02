@@ -567,7 +567,7 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 			err = mh.rsendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
 		} else {
 			klog.Infof("sendMsg test, msg is %v, group is %v", copyMsg, copyMsg.GetGroup())
-			klog.Infof("begin OnRegister:%v,and conn state is:%v", info.NodeID, conn.(*hubio.JSONIO).Connection.ConnectionState().State)
+			klog.Infof("sendMsg conn state:%v,and conn state is:%v", info.NodeID, conn.(*hubio.JSONIO).Connection.ConnectionState().State)
 			err = mh.sendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
 		}
 
