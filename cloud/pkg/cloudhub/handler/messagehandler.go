@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/cloudrelay"
+	v1 "github.com/kubeedge/kubeedge/pkg/apis/relays/v1"
 	"regexp"
 	"strings"
 	"sync"
@@ -844,12 +845,27 @@ func getNodeID(resource string) string {
 	return sli[1]
 }
 
-func deepCopyInfo(oldID string, info *model.HubInfo) *model.HubInfo {
-	if info == nil {
-		return nil
+func (mh *MessageHandle) freshConns(msg *beehiveModel.Message) {
+	var relayrc *v1.RelayrcSpec
+	content, err := msg.GetContentData()
+	if err != nil {
+		klog.Errorf("getcontent failed:%v", err)
+		return
 	}
-	out := new(model.HubInfo)
-	out.NodeID = oldID
-	out.ProjectID = info.ProjectID
-	return out
+	err = json.Unmarshal(content, &relayrc)
+	if err != nil {
+		klog.Errorf("unmarshal failed:%v", err)
+		return
+	}
+
+	for k, _ := range relayrc.Data.AddrData {
+		if conn, ok := mh.nodeConns.Load(k); ok {
+			klog.Warningf("begin to remove conn %v", k)
+			if err := conn.(hubio.CloudHubIO).Close(); err != nil {
+				klog.Errorf("failed to close connection %v, err is %v", conn, err)
+			}
+			mh.nodeConns.Delete(k)
+		}
+	}
+
 }

@@ -38,14 +38,13 @@ func (rc *RelayController) checkRelay() {
 			}
 			switch e.Type {
 			case watch.Added:
-				klog.Info("relaycontroller added begin")
 				rc.relayrcAdded(relayrc)
 			case watch.Deleted:
 				rc.relayrcDeleted(relayrc)
 			case watch.Modified:
 				rc.relayrcUpdated(relayrc)
 			default:
-				klog.Warningf("Device event type: %s unsupported", e.Type)
+				klog.Warningf("relay event type: %s unsupported", e.Type)
 			}
 
 		}
