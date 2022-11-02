@@ -344,15 +344,12 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 			oldIsRelayNode := config.Config.GetIsRelayNode()
 
 			er.SaveRelayStatus(false)
-			if relayID != config.Config.GetNodeID() {
-				er.SwitchEdgeHubMode(oldStatus, oldIsRelayNode)
-			}
+			er.SwitchEdgeHubMode(oldStatus, oldIsRelayNode)
+
 			break
 		case common.RelayOpenOperation:
 			er.Save(status, relayID, relayData)
-			if relayID != config.Config.GetNodeID() {
-				er.FirstSwitch()
-			}
+			er.FirstSwitch()
 			break
 		case common.RelayUpdateDataOperation:
 			er.SaveDate(relayData)

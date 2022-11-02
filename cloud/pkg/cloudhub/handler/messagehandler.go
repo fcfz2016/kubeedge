@@ -500,6 +500,7 @@ func (mh *MessageHandle) ListMessageWriteLoop(info *model.HubInfo, stopServe cha
 
 		conn, ok := mh.nodeConns.Load(info.NodeID)
 		if !ok {
+			klog.Errorf("listMessageLoop no conn%v", info.NodeID)
 			continue
 		}
 
