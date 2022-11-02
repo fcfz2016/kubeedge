@@ -864,12 +864,14 @@ func (mh *MessageHandle) freshConns(msg *beehiveModel.Message) {
 	}
 
 	for k, _ := range relayrc.Data.AddrData {
-		if conn, ok := mh.nodeConns.Load(k); ok {
-			klog.Warningf("begin to remove conn %v", k)
-			if err := conn.(hubio.CloudHubIO).Close(); err != nil {
-				klog.Errorf("failed to close connection %v, err is %v", conn, err)
+		if k != cloudrelay.RelayHandle.GetRelayId() {
+			if conn, ok := mh.nodeConns.Load(k); ok {
+				klog.Warningf("begin to remove conn %v", k)
+				if err := conn.(hubio.CloudHubIO).Close(); err != nil {
+					klog.Errorf("failed to close connection %v, err is %v", conn, err)
+				}
+				mh.nodeConns.Delete(k)
 			}
-			mh.nodeConns.Delete(k)
 		}
 	}
 
