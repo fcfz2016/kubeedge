@@ -74,9 +74,10 @@ func (rc *RelayController) relayrcAdded(relayrc *v1.Relayrc) {
 }
 
 func (rc *RelayController) relayrcDeleted(relayrc *v1.Relayrc) {
-	rc.relayrcManager.RelayInfo.Delete(relayrc.Name)
-	cloudrelay.RelayHandle.SetStatus(false)
 	klog.Warningf("Relay delete")
+
+	// rc.relayrcManager.RelayInfo.Delete(relayrc.Name)
+	cloudrelay.RelayHandle.SetStatus(false)
 	cloudrelay.RelayHandle.SetRelayId("")
 	relayrc.Spec.Open = false
 	// 下发关闭信息

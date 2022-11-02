@@ -864,7 +864,7 @@ func (mh *MessageHandle) freshConns(msg *beehiveModel.Message) {
 	}
 
 	for k, _ := range relayrc.Data.AddrData {
-		if k != cloudrelay.RelayHandle.GetRelayId() {
+		if k != relayrc.RelayID {
 			if conn, ok := mh.nodeConns.Load(k); ok {
 				klog.Warningf("begin to remove conn %v", k)
 				if err := conn.(hubio.CloudHubIO).Close(); err != nil {
