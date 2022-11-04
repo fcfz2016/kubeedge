@@ -74,18 +74,31 @@ func (rc *RelayController) relayrcAdded(relayrc *v1.Relayrc) {
 }
 
 func (rc *RelayController) relayrcDeleted(relayrc *v1.Relayrc) {
-	klog.Warningf("Relay delete")
+	value, ok := rc.relayrcManager.RelayInfo.Load(relayrc.Name)
+	klog.Warningf("Relay deleted")
 
-	// rc.relayrcManager.RelayInfo.Delete(relayrc.Name)
-	cloudrelay.RelayHandle.SetStatus(false)
-	cloudrelay.RelayHandle.SetRelayId("")
-	relayrc.Spec.Open = false
-	// 下发关闭信息
-	msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayCloseOperation, relayrc)
-	err := rc.messageLayer.Send(*msg)
-	if err != nil {
-		klog.Warningf("relay close send error", err)
+	if ok {
+		cacheRelayrc := value.(*v1.Relayrc)
+		if cacheRelayrc.Spec.Open {
+			klog.Infof("Relay deleted, from open to close")
+			cloudrelay.RelayHandle.SetStatus(false)
+			cloudrelay.RelayHandle.SetRelayId("")
+			relayrc.Spec.Open = false
+			// 下发关闭信息
+			msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayCloseOperation, relayrc)
+			err := rc.messageLayer.Send(*msg)
+			if err != nil {
+				klog.Warningf("relay close send error", err)
+			}
+		} else {
+			klog.Warningf("Relay is closed already")
+		}
+	} else {
+		klog.Errorf("relayadded load failed")
 	}
+	// todo:?
+	// rc.relayrcManager.RelayInfo.Delete(relayrc.Name)
+
 }
 
 func (rc *RelayController) relayrcUpdated(relayrc *v1.Relayrc) {
@@ -93,55 +106,59 @@ func (rc *RelayController) relayrcUpdated(relayrc *v1.Relayrc) {
 	value, ok := rc.relayrcManager.RelayInfo.Load(relayrc.Name)
 	rc.relayrcManager.RelayInfo.Store(relayrc.Name, relayrc)
 
-	cloudrelay.RelayHandle.SetRelayId(relayrc.Spec.RelayID)
 	if ok {
 		cacheRelayrc := value.(*v1.Relayrc)
-		if isRelayRCUpdated(cacheRelayrc, relayrc) {
-			// 如果是开关改动
-			if isSwitchUpdated(cacheRelayrc.Spec.Open, relayrc.Spec.Open) {
-				if relayrc.Spec.Open {
-					cloudrelay.RelayHandle.SetStatus(true)
-					if isRelayIDExist(relayrc.Spec.RelayID) {
-						klog.Warningf("Relay updated", relayrc.Spec.RelayID)
-						msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayOpenOperation, relayrc)
-						err := rc.messageLayer.Send(*msg)
-						if err != nil {
-							klog.Warningf("relay open msg send error", err)
-						}
-					}
-				} else {
-					cloudrelay.RelayHandle.SetStatus(false)
-					klog.Warningf("Relay updated", relayrc.Spec.RelayID)
-					msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayCloseOperation, relayrc)
+		klog.Warningf("Relay updated")
+		// 如果是开关改动
+		if isSwitchUpdated(cacheRelayrc.Spec.Open, relayrc.Spec.Open) {
+			klog.Warningf("RelaySwitch updated to open")
+			if relayrc.Spec.Open {
+				cloudrelay.RelayHandle.SetStatus(true)
+				if isRelayIDExist(relayrc.Spec.RelayID) {
+					klog.Warningf("RelaySwitch updated to open:%v", relayrc.Spec.RelayID)
+					msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayOpenOperation, relayrc)
 					err := rc.messageLayer.Send(*msg)
 					if err != nil {
-						klog.Warningf("relay close msg send error", err)
-					}
-				}
-			} else if isRelayIDUpdated(cacheRelayrc.Spec.RelayID, relayrc.Spec.RelayID) {
-				if relayrc.Spec.Open {
-					klog.Warningf("Relay ID updated", relayrc.Spec.RelayID)
-					// 新的relayID信息发送给旧的relayID处理
-					msg := buildControllerMessage(cacheRelayrc.Spec.RelayID, relayrc.Namespace, RelayUpdateIDOperation, relayrc)
-					err := rc.messageLayer.Send(*msg)
-					if err != nil {
-						klog.Warningf("relay update msg send error", err)
-					}
-				}
-			} else if isRelayDataUpdate(cacheRelayrc.Spec.Data, relayrc.Spec.Data) {
-				if relayrc.Spec.Open {
-					klog.Warningf("Relay Data updated", relayrc.Spec.RelayID)
-					msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayUpdateDataOperation, relayrc)
-					err := rc.messageLayer.Send(*msg)
-					if err != nil {
-						klog.Warningf("relay close msg send error", err)
+						klog.Warningf("relay open msg send error", err)
 					}
 				}
 			} else {
-				klog.Warningf("Relay updated", relayrc.Spec.RelayID)
-				klog.Warningf("any other relay msg updated")
+				klog.Warningf("RelaySwitch updated to close:%v", relayrc.Spec.RelayID)
+				cloudrelay.RelayHandle.SetStatus(false)
+				msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayCloseOperation, relayrc)
+				err := rc.messageLayer.Send(*msg)
+				if err != nil {
+					klog.Warningf("relay close msg send error", err)
+				}
 			}
+		} else if isRelayIDUpdated(cacheRelayrc.Spec.RelayID, relayrc.Spec.RelayID) {
+			klog.Warningf("RelayID updated, old id is %v, new id is %v", cacheRelayrc.Spec.RelayID, relayrc.Spec.RelayID)
+			cloudrelay.RelayHandle.SetRelayId(relayrc.Spec.RelayID)
+			if relayrc.Spec.Open {
+				klog.Warningf("Relay ID updated", relayrc.Spec.RelayID)
+				// 新的relayID信息发送给旧的relayID处理
+				msg := buildControllerMessage(cacheRelayrc.Spec.RelayID, relayrc.Namespace, RelayUpdateIDOperation, relayrc)
+				err := rc.messageLayer.Send(*msg)
+				if err != nil {
+					klog.Warningf("relay update msg send error", err)
+				}
+			}
+		} else if isRelayDataUpdate(cacheRelayrc.Spec.Data, relayrc.Spec.Data) {
+			klog.Warningf("RelayData updated, old data is %v, new data is %v", cacheRelayrc.Spec.Data, relayrc.Spec.Data)
+			if relayrc.Spec.Open {
+				klog.Warningf("Relay Data updated", relayrc.Spec.RelayID)
+				msg := buildControllerMessage(relayrc.Spec.RelayID, relayrc.Namespace, RelayUpdateDataOperation, relayrc)
+				err := rc.messageLayer.Send(*msg)
+				if err != nil {
+					klog.Warningf("relay close msg send error", err)
+				}
+			}
+		} else {
+			klog.Warningf("any other relay msg updated: %v", relayrc.Spec.RelayID)
 		}
+
+	} else {
+		klog.Errorf("relayadded load failed")
 	}
 }
 
@@ -162,10 +179,6 @@ func isSwitchUpdated(old bool, new bool) bool {
 
 func isRelayIDUpdated(old string, new string) bool {
 	return old != new
-}
-
-func isRelayRCUpdated(old *v1.Relayrc, new *v1.Relayrc) bool {
-	return !reflect.DeepEqual(old.ObjectMeta, new.ObjectMeta) || !reflect.DeepEqual(old.Spec, new.Spec) || !reflect.DeepEqual(old.Status, new.Status)
 }
 
 func buildControllerMessage(nodeID, namespace, opr string, relayrc *v1.Relayrc) *model.Message {

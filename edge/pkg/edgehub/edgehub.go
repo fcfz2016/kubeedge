@@ -75,6 +75,7 @@ func (eh *EdgeHub) Start() {
 	go eh.ifRotationDone()
 
 	for {
+		klog.Infof("edgehub begin new loop", relayConfig.Config.GetStatus())
 		select {
 		case <-beehiveContext.Done():
 			klog.Warning("EdgeHub stop")
@@ -132,15 +133,15 @@ func (eh *EdgeHub) Start() {
 			eh.pubConnectInfo(false)
 
 			klog.Warningf("non-relay node mode switches")
-			time.Sleep(waitTime)
-			//cleanChan:
-			//	for {
-			//		select {
-			//		case <-relay.HubRelayChan.IsClose:
-			//		default:
-			//			break cleanChan
-			//		}
-			//	}
+			// time.Sleep(waitTime)
+		cleanChan:
+			for {
+				select {
+				case <-relay.HubRelayChan.IsClose:
+				default:
+					break cleanChan
+				}
+			}
 
 			continue // 跳出循环
 		}

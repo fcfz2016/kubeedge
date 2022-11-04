@@ -122,7 +122,7 @@ func (eh *EdgeHub) routeToEdge() {
 			eh.reconnectChan <- struct{}{}
 			return
 		}
-		klog.Infof("edgehub receive msg from cloud(for relay test), %v", message)
+		klog.Infof("edgehub receive msg from cloud, %v", message)
 		klog.V(4).Infof("[edgehub/routeToEdge] receive msg from cloud, msg:% +v", message)
 		err = eh.dispatch(message)
 		if err != nil {
@@ -164,6 +164,7 @@ func (eh *EdgeHub) routeToCloud() {
 			beehiveContext.Send(modules.EdgeRelayModuleName, message)
 			continue
 		}
+		
 		err = eh.tryThrottle(message.GetID())
 		if err != nil {
 			klog.Errorf("msgID: %s, client rate limiter returned an error: %v ", message.GetID(), err)
