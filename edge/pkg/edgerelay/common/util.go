@@ -23,6 +23,12 @@ const (
 	DefaultNameSpace       = "default"
 	ResourceTypeRelayReply = "relayrcs"
 	RelayReplyOperation    = "relayreply"
+
+	ReplyOpenSuccess       = "opensuccess"
+	ReplyCloseSuccess      = "closesuccess"
+	ReplyFail              = "fail"
+	ReplyChangeDataSuccess = "changedata"
+	ReplyChangeIdSuccess   = "changeid"
 )
 
 func GetResourceType(resource string) string {

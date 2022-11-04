@@ -245,6 +245,9 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 			if relayID != config.Config.GetNodeID() {
 				er.SwitchEdgeHubMode(oldStatus, oldIsRelayNode)
 			}
+			er.replyToCloud(common.ReplyCloseSuccess)
+			// 给所有其他节点发信息
+			er.notifyRelayChange(msg, "")
 
 			break
 		case common.RelayOpenOperation:
@@ -252,41 +255,32 @@ func (er *EdgeRelay) HandleMsgFromEdgeHub(msg *model.Message) {
 			if relayID != config.Config.GetNodeID() {
 				er.FirstSwitch()
 			}
+			er.replyToCloud(common.ReplyOpenSuccess)
+			// 给所有其他节点发信息
+			er.notifyRelayChange(msg, "")
 			break
 		case common.RelayUpdateDataOperation:
 			er.SaveDate(relayData)
+
+			// 给所有其他节点发信息
+			er.notifyRelayChange(msg, "")
 			break
 		case common.RelayUpdateIDOperation:
 			oldStatus := config.Config.GetStatus()
 			oldIsRelayNode := config.Config.GetIsRelayNode()
 
+			err = er.notifyIdChange(msg, relayID)
+			if err != nil {
+				er.replyToCloud(common.ReplyFail)
+				klog.Errorf("Failed to specify a new relay node:%v", err)
+			}
+			er.replyToCloud(common.ReplyChangeIdSuccess)
 			er.SaveRelayID(relayID)
 
 			if oldIsRelayNode != config.Config.GetIsRelayNode() {
 				er.SwitchEdgeHubMode(oldStatus, oldIsRelayNode)
 			}
 			break
-		}
-
-		// 给其他节点下发中继信息
-		klog.Infof("send relay_mark msg to non-relay node")
-		if config.Config.GetNodeID() == config.Config.GetRelayID() {
-			container := &mux.MessageContainer{
-				Header:  map[string][]string{},
-				Message: msg,
-			}
-			container.Header.Add("relay_mark", common.ResourceTypeRelay)
-			nodeMap := er.GetAllAddress()
-
-			for k, v := range nodeMap {
-				// 给非本节点传递信息
-				if k != config.Config.GetNodeID() {
-					er.client(v, container)
-					klog.Infof("relay %v send to non-relay node:%v", config.Config.GetNodeID(), k)
-				}
-			}
-			klog.Infof("send relay_mark msg finished, and feedback to cloud")
-			er.replyToCloud()
 		}
 
 	} else {
@@ -350,19 +344,28 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 		case common.RelayOpenOperation:
 			er.Save(status, relayID, relayData)
 			er.FirstSwitch()
+
 			break
 		case common.RelayUpdateDataOperation:
 			er.SaveDate(relayData)
+
 			break
 		case common.RelayUpdateIDOperation:
+			oldRelayID := config.Config.GetRelayID()
 			oldStatus := config.Config.GetStatus()
 			oldIsRelayNode := config.Config.GetIsRelayNode()
 
 			er.SaveRelayID(relayID)
 
+			// todo:先通知还是先切换
 			if oldIsRelayNode != config.Config.GetIsRelayNode() {
 				er.SwitchEdgeHubMode(oldStatus, oldIsRelayNode)
 			}
+
+			if config.Config.GetIsRelayNode() {
+				er.notifyRelayChange(msg, oldRelayID)
+			}
+
 			break
 		}
 
@@ -388,7 +391,7 @@ func (er *EdgeRelay) HandleMsgFromOtherEdge(container *mux.MessageContainer) {
 			klog.Infof("get msg from relay node and send them correct module")
 			// 本节点非中继节点，ToOtherModule
 			msg = container.Message
-			klog.Infof("HandleMsgFromOtherEdge,node is non-relaynode:%v", msg)
+			klog.Infof("HandleMsgFromOtherEdge,node is non-relay node:%v", msg)
 			er.MsgToOtherModule(msg)
 		}
 	}
@@ -469,7 +472,7 @@ func (er *EdgeRelay) receiveMessage(writer http.ResponseWriter, request *http.Re
 }
 
 // client
-func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer) {
+func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer) error {
 	klog.Infof("Relay client begin,and msg is:%v", container)
 	ip := addr.IP
 	port := addr.Port
@@ -482,6 +485,7 @@ func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer
 	klog.Infof("client string %v", string(b))
 	if err != nil {
 		fmt.Println("json format error:", err)
+		return fmt.Errorf("client failed:%v", err)
 	}
 
 	body := bytes.NewBuffer(b)
@@ -490,12 +494,13 @@ func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer
 	if err != nil {
 		// todo: 多于某值的节点未收到的处理措施，以及失败重试
 		klog.Errorf("Post failed:", err)
-		return
+		return fmt.Errorf("client failed:%v", err)
 	}
 
 	repbody, err := io.ReadAll(response.Body)
 	if err != nil {
 		klog.Errorf("repbody error:%v", err)
+		return fmt.Errorf("client failed:%v", err)
 	}
 
 	defer func() {
@@ -507,9 +512,10 @@ func (er *EdgeRelay) client(addr v1.NodeAddress, container *mux.MessageContainer
 
 	if response.StatusCode != http.StatusOK {
 		klog.Errorf("client failed")
-		return
+		return fmt.Errorf("client failed,statusCode is:%v", response.StatusCode)
 	}
 	klog.Infof("Relay client end, status is:%v, body is:%v", response.StatusCode, string(repbody))
+	return nil
 }
 
 func (er *EdgeRelay) GetAddress(nodeID string) v1.NodeAddress {
@@ -535,7 +541,7 @@ func trimMessage(msg *model.Message) {
 	}
 }
 
-func (er *EdgeRelay) replyToCloud() {
+func (er *EdgeRelay) replyToCloud(res string) {
 	msg := model.NewMessage("")
 
 	resource, err := common.BuildResource(config.Config.GetNodeID(), common.DefaultNameSpace, common.ResourceTypeRelayReply, "")
@@ -544,7 +550,57 @@ func (er *EdgeRelay) replyToCloud() {
 		return
 	}
 	msg = msg.BuildRouter(common.EdgeRelayModuleName, common.GroupResource, resource, common.RelayReplyOperation)
-	msg.Content = "OK"
+	msg.Content = res
 
 	er.MsgToEdgeHub(msg)
+}
+
+func (er *EdgeRelay) notifyRelayChange(msg *model.Message, id string) error {
+	klog.Infof("send relay_mark msg to all non-relay node")
+	if config.Config.GetNodeID() == config.Config.GetRelayID() {
+
+		container := er.sealRelayMarkMsg(msg)
+		nodeMap := er.GetAllAddress()
+
+		for k, v := range nodeMap {
+			// 给非本节点传递信息
+			if k != config.Config.GetNodeID() && k != id {
+				err := er.client(v, container)
+				if err != nil {
+					klog.Errorf("notfiyIdChange failed:%v", err)
+
+					// todo：失败之后的处理，预计使用多数原则
+				}
+				// klog.Infof("relay %v send to non-relay node:%v", config.Config.GetNodeID(), k)
+			}
+		}
+		// klog.Infof("send relay_mark msg finished, and feedback to cloud")
+		// er.replyToCloud()
+	}
+	return nil
+}
+
+func (er *EdgeRelay) notifyIdChange(msg *model.Message, newRelay string) error {
+	klog.Infof("send relay_mark msg to non-relay node about notifyIdChange")
+	if config.Config.GetNodeID() == config.Config.GetRelayID() {
+		container := er.sealRelayMarkMsg(msg)
+
+		ip := er.GetAddress(newRelay)
+		err := er.client(ip, container)
+		if err != nil {
+			return fmt.Errorf("notfiyIdChange failed:%v", err)
+		}
+
+		klog.Infof("relay %v send to non-relay node:%v", config.Config.GetNodeID(), newRelay)
+	}
+	return nil
+}
+
+func (er *EdgeRelay) sealRelayMarkMsg(msg *model.Message) *mux.MessageContainer {
+	container := &mux.MessageContainer{
+		Header:  map[string][]string{},
+		Message: msg,
+	}
+	container.Header.Add("relay_mark", common.ResourceTypeRelay)
+	return container
 }

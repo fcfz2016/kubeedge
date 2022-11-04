@@ -75,7 +75,7 @@ func (eh *EdgeHub) Start() {
 	go eh.ifRotationDone()
 
 	for {
-		klog.Infof("edgehub begin new loop", relayConfig.Config.GetStatus())
+		klog.Infof("edgehub begin new loop:%v", relayConfig.Config.GetStatus())
 		select {
 		case <-beehiveContext.Done():
 			klog.Warning("EdgeHub stop")
@@ -97,8 +97,7 @@ func (eh *EdgeHub) Start() {
 		//	continue
 		//}
 
-		klog.Infof("node relayconfig status", relayConfig.Config.GetStatus())
-		klog.Infof("node isrelaynode", relayConfig.Config.GetIsRelayNode())
+		klog.Infof("node relayconfig status:%v, is node isrelaynode:%v", relayConfig.Config.GetStatus(), relayConfig.Config.GetIsRelayNode())
 
 		if !relayConfig.Config.GetStatus() || (relayConfig.Config.GetStatus() && relayConfig.Config.GetIsRelayNode()) {
 			klog.Infof("node open chClient")

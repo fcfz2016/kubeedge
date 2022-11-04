@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/cloudrelay"
-	v1 "github.com/kubeedge/kubeedge/pkg/apis/relays/v1"
+	relayCommon "github.com/kubeedge/kubeedge/edge/pkg/edgerelay/common"
 	"regexp"
 	"strings"
 	"sync"
@@ -125,6 +125,10 @@ func (mh *MessageHandle) HandleServer(container *mux.MessageContainer, writer mu
 	}
 
 	if container.Message.GetOperation() == relayconstants.RelayReplyOperation {
+
+		switch expr {
+
+		}
 		klog.Infof("RelayReply message received from node:%s, status is:%v", nodeID, container.Message.GetContent())
 		return
 	}
@@ -570,16 +574,27 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 		var err error
 
 		if conn, ok = mh.nodeConns.Load(info.NodeID); ok {
-			klog.Infof("fresh Conn failed")
-		}
-
-		if copyMsg.Router.Group == relayconstants.RelayGroupName {
-			klog.Infof("rsendMsg test, msg is %v, group is %v", copyMsg, copyMsg.GetGroup())
-			err = mh.rsendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
+			klog.Infof("fresh Conn")
+			if copyMsg.Router.Group == relayconstants.RelayGroupName {
+				klog.Infof("rsendMsg test, msg is %v, group is %v", copyMsg, copyMsg.GetGroup())
+				v, ok := conn.(hubio.CloudHubIO)
+				if !ok {
+					klog.Errorf("conn is empty:%v")
+				} else {
+					err = mh.rsendMsg(v, info, copyMsg, msg, nodeStore)
+				}
+			} else {
+				klog.Infof("sendMsg test, msg is %v, group is %v", copyMsg, copyMsg.GetGroup())
+				// klog.Infof("sendMsg conn state:%v,and conn state is:%v", info.NodeID, conn.(*hubio.JSONIO).Connection.ConnectionState().State)
+				v, ok := conn.(hubio.CloudHubIO)
+				if !ok {
+					klog.Errorf("conn is empty:%v")
+				} else {
+					err = mh.sendMsg(v, info, copyMsg, msg, nodeStore)
+				}
+			}
 		} else {
-			klog.Infof("sendMsg test, msg is %v, group is %v", copyMsg, copyMsg.GetGroup())
-			// klog.Infof("sendMsg conn state:%v,and conn state is:%v", info.NodeID, conn.(*hubio.JSONIO).Connection.ConnectionState().State)
-			err = mh.sendMsg(conn.(hubio.CloudHubIO), info, copyMsg, msg, nodeStore)
+			klog.Errorf("fresh Conn failed")
 		}
 
 		if err != nil {
@@ -866,30 +881,52 @@ func getNodeID(resource string) string {
 	return sli[1]
 }
 
-func (mh *MessageHandle) freshConns(msg *beehiveModel.Message) {
-	var relayrc *v1.RelayrcSpec
-	content, err := msg.GetContentData()
+func (mh *MessageHandle) handleRelayReply(msg *beehiveModel.Message) {
+	contentMsg, err := msg.GetContentData()
 	if err != nil {
 		klog.Errorf("getcontent failed:%v", err)
 		return
 	}
-	err = json.Unmarshal(content, &relayrc)
-	if err != nil {
-		klog.Errorf("unmarshal failed:%v", err)
-		return
-	}
+	content := string(contentMsg)
 
-	for k, _ := range relayrc.Data.AddrData {
-		if k != relayrc.RelayID {
-			if _, ok := mh.nodeConns.Load(k); ok {
-				//klog.Warningf("begin to remove conn %v", k)
-				//if err := conn.(hubio.CloudHubIO).Close(); err != nil {
-				//	klog.Errorf("failed to close connection %v, err is %v", conn, err)
-				//}
-				//mh.nodeConns.Delete(k)
-				klog.Infof("conn %s is exist", k)
-			}
-		}
-	}
+	// todo:relay信息通知的主从顺序
+	switch content {
+	case relayCommon.ReplyChangeDataSuccess:
+		break
+	case relayCommon.ReplyChangeIdSuccess:
+		break
+	case relayCommon.ReplyOpenSuccess:
 
+		break
+	case relayCommon.ReplyFail:
+		break
+	}
 }
+
+//func (mh *MessageHandle) freshConns(msg *beehiveModel.Message) {
+//	var relayrc *v1.RelayrcSpec
+//	content, err := msg.GetContentData()
+//	if err != nil {
+//		klog.Errorf("getcontent failed:%v", err)
+//		return
+//	}
+//	err = json.Unmarshal(content, &relayrc)
+//	if err != nil {
+//		klog.Errorf("unmarshal failed:%v", err)
+//		return
+//	}
+//
+//	for k, _ := range relayrc.Data.AddrData {
+//		if k != relayrc.RelayID {
+//			if _, ok := mh.nodeConns.Load(k); ok {
+//				//klog.Warningf("begin to remove conn %v", k)
+//				//if err := conn.(hubio.CloudHubIO).Close(); err != nil {
+//				//	klog.Errorf("failed to close connection %v, err is %v", conn, err)
+//				//}
+//				//mh.nodeConns.Delete(k)
+//				klog.Infof("conn %s is exist", k)
+//			}
+//		}
+//	}
+//
+//}

@@ -54,7 +54,7 @@ func (rc *RelayController) checkRelay() {
 
 func (rc *RelayController) relayrcAdded(relayrc *v1.Relayrc) {
 	rc.relayrcManager.RelayInfo.Store(relayrc.Name, relayrc)
-	klog.Warningf("Relay added", relayrc.Spec.RelayID)
+	klog.Warningf("Relay added:%v", relayrc.Spec.RelayID)
 	if relayrc.Spec.Open {
 		// todo: 等待中继节点返回确认信息后，异步设置status
 		cloudrelay.RelayHandle.SetStatus(true)
