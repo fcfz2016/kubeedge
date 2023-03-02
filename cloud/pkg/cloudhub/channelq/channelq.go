@@ -97,7 +97,7 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 
 		// relay模式下向relay节点发送数据
 		rnodeID := cloudrelay.RelayHandle.GetRelayId()
-		if nodeID != rnodeID && cloudrelay.RelayHandle.GetStatus() && rnodeID != "" {
+		if msg.GetOperation() != "updateidrelay" && nodeID != rnodeID && cloudrelay.RelayHandle.GetStatus() && rnodeID != "" {
 			_, rmsg, err := cloudrelay.RelayHandle.SealMessage(&msg)
 			if err != nil {
 				klog.Warning("sealmessage failed in cloudhub")

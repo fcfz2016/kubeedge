@@ -126,9 +126,9 @@ func (mh *MessageHandle) HandleServer(container *mux.MessageContainer, writer mu
 
 	if container.Message.GetOperation() == relayconstants.RelayReplyOperation {
 
-		switch expr {
-
-		}
+		//switch expr {
+		//
+		//}
 		klog.Infof("RelayReply message received from node:%s, status is:%v", nodeID, container.Message.GetContent())
 		return
 	}
@@ -495,7 +495,7 @@ func (mh *MessageHandle) ListMessageWriteLoop(info *model.HubInfo, stopServe cha
 		}
 
 		if strings.Contains(msg.GetResource(), "relayrcs") && msg.Router.Operation == "closerelay" {
-			mh.freshConns(msg)
+			// mh.freshConns(msg)
 		}
 
 		klog.V(4).Infof("event to send for node %s, %s, content %s", info.NodeID, dumpMessageMetadata(msg), msg.Content)
@@ -509,7 +509,7 @@ func (mh *MessageHandle) ListMessageWriteLoop(info *model.HubInfo, stopServe cha
 		}
 
 		if err := mh.send(conn.(hubio.CloudHubIO), info, msg); err != nil {
-			klog.Errorf("failed to send to cloudhub, err: %v", err)
+			klog.Errorf("failed to send to cloudhub, err: %v,and msg is:%v", err, msg)
 		}
 
 		// delete successfully sent events from the queue/store
@@ -535,7 +535,6 @@ func (mh *MessageHandle) MessageWriteLoop(info *model.HubInfo, stopServe chan Ex
 			// klog.Infof("531sendMsg_temp conn state:%v", info.NodeID)
 			if conn, ok = mh.nodeConns.Load(info.NodeID); ok {
 
-				// 改成 continue
 				break
 			}
 			value, _ := mh.nodeCond.Load(info.NodeID)
